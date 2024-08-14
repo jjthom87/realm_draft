@@ -3,13 +3,77 @@ const router = express.Router();
 const knex = require('knex')(require('../knexfile.js'));
 
 router.get('/draft', (req, res) => {
-    knex('draft')
+    knex('sorted_draft')
     .then(data => {
         res.status(200).json({ success: true, data: data });
     })
     .catch(err => {
         console.log('Error ', err);
     });
+});
+
+router.get('/draft/players', (req, res) => {
+    knex('sorted_draft')
+    .select("name")
+    .then(data => {
+        res.status(200).json({ success: true, data: data.filter((d) => d.name != null).map((d) => d.name) });
+    })
+    .catch(err => {
+        console.log('Error ', err);
+    });
+});
+
+router.put('/draft/pick', (req, res) => {
+    knex('sorted_draft').where({ round: req.body.round, pick: req.body.pick }).update(
+        {
+          name: req.body.name,
+          position: req.body.position
+        },
+    ).then(data => {
+        res.status(200).json({ success: true, data: data, user: req.user.username });
+    })
+    .catch(err => {
+        console.log('Error ', err);
+    });
+
+})
+
+router.get('/players', (req, res) => {
+    knex('players')
+    .then(data => {
+        res.status(200).json({ success: true, data: data });
+    })
+    .catch(err => {
+        console.log('Error ', err);
+    });
+});
+
+router.get('/keepers/:team', (req, res) => {
+    knex('teams_players')
+        .select('*')
+        .where({ team: req.params.team.split("&").join(" ") })
+    .then(data => {
+        res.status(200).json({ success: true, data: data, user: req.user.username });
+    })
+    .catch(err => {
+        console.log('Error ', err);
+    });
+})
+
+router.put('/keepers/:team', (req, res) => {
+    console.log(req.body);
+    console.log(req.params)
+    knex('teams_players').where({ team: req.params.team.split("&").join(" "), name: req.body.name }).update(
+        {
+          keeper: req.body.keeper
+        },
+    ).then(data => {
+        res.status(200).json({ success: true, data: data, user: req.user.username });
+    })
+    .catch(err => {
+        console.log('Error ', err);
+    });
+
 })
 
 module.exports = router;
