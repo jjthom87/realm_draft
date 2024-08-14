@@ -12,11 +12,6 @@ const helmet = require('helmet');
 
 const cookieParser = require('cookie-parser')
 const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-const bcrypt = require('bcrypt');
-
-// Knex instance
-const knex = require('knex')(require('./knexfile.js'));
 
 // Create Express app and also allow for app PORT to be optionally specified by an environment variable
 const app = express();
