@@ -193,16 +193,27 @@ document.getElementsByTagName("body")[0].addEventListener("keypress", function(e
                 return response.json(); 
             })
             .then(function(draftPicks){
-                let players = allPlayers.data;
-                let mappedPlayers = players.map((player)=> { 
-                    return player.name + ", " + player.position
+
+                fetch("/api/keepers")
+                .then(function(response){ 
+                    return response.json(); 
                 })
-                mappedPlayers.forEach((player, index) => {
-                    if(draftPicks.data.includes(player.split(",")[0])){
-                        mappedPlayers.splice(index,1)
-                    }
-                })
-                autocomplete(document.getElementById("player-pick-input"), mappedPlayers)
+                .then(function(keepers){
+                    let players = allPlayers.data;
+                    let mappedPlayers = players.map((player)=> { 
+                        return player.name + ", " + player.position
+                    })
+                    mappedPlayers.forEach((player, index) => {
+                        if(draftPicks.data.includes(player.split(",")[0])){
+                            mappedPlayers.splice(index,1)
+                        }
+                        let mappedKeepers = keepers.data.map((keeper) => keeper.name);
+                        if(mappedKeepers.includes(player.split(",")[0])){
+                            mappedPlayers.splice(index,1)
+                        }
+                    })
+                    autocomplete(document.getElementById("player-pick-input"), mappedPlayers)
+                });
             });
         });
     }
