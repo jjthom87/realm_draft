@@ -1,4 +1,4 @@
-function loadHtml(res){
+function loadHtml(res, draftDisplay){
     if(res.success){
         let user = res.user
         document.getElementById("page-container").innerHTML = "";
@@ -7,7 +7,7 @@ function loadHtml(res){
         let welcomeHtml = "<h3>Welcome " + res.user + "</h3>";
         let buttonsHtml = '<div><button style="margin: 2px;" id="show-draft-button">Draft</button><button style="margin: 2px;" id="show-keepers-button">Keepers</button></div>'
 
-        let draftHtml = '<div id="draft-section" style="display: none;">'
+        let draftHtml = '<div id="draft-section" style="display: '+draftDisplay+';">'
         draftHtml += "<table>"
         draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Position</th></tr></thead>';
         
@@ -78,7 +78,7 @@ setTimeout(() => {
         return response.json(); 
     })
     .then(function(res){ 
-        loadHtml(res)
+        loadHtml(res, "none")
     });
 }, 100);
 
@@ -247,7 +247,7 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
                         alert("Username does not exist")
                     }
                 } else {
-                    loadHtml(res)
+                    loadHtml(res, "none")
                 }
             });
         
@@ -273,7 +273,7 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
             return response.json(); 
         })
         .then(function(res){ 
-            loadHtml(res)
+            loadHtml(res, "block")
         });
     } else if (e.target.id == "show-draft-button"){
         document.getElementById("keepers-section").style.display = "none"
@@ -296,20 +296,25 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
                 return response.json(); 
             })
             .then(function(teamKeepers){
-                let player = teamKeepers.data.find((tk) => tk.name == e.target.value.split("&").join(" "));
-                let keeper = player.keeper == 0 ? true : false;
-                fetch(`/api/keepers/${res.user.split(" ").join("&")}`, {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({keeper: keeper, name: player.name})
-                })
-                .then(function(response){ 
-                    return response.json(); 
-                })
-                .then(function(res){ 
-                });
+                if(teamKeepers.data.filter((tk) => tk.keeper == 1).length < 12 || !e.target.checked){
+                    let player = teamKeepers.data.find((tk) => tk.name == e.target.value.split("&").join(" "));
+                    let keeper = player.keeper == 0 ? true : false;
+                    fetch(`/api/keepers/${res.user.split(" ").join("&")}`, {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({keeper: keeper, name: player.name})
+                    })
+                    .then(function(response){ 
+                        return response.json(); 
+                    })
+                    .then(function(res){ 
+                    });
+                } else {
+                    e.target.checked = false;
+                    alert("Can only have 12 Keepers")
+                }
             });
         });
     }

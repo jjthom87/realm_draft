@@ -8,7 +8,7 @@ router.get('/draft', (req, res) => {
         res.status(200).json({ success: true, data: data });
     })
     .catch(err => {
-        console.log('Error ', err);
+        console.error('Error ', err);
     });
 });
 
@@ -19,7 +19,7 @@ router.get('/draft/players', (req, res) => {
         res.status(200).json({ success: true, data: data.filter((d) => d.name != null).map((d) => d.name) });
     })
     .catch(err => {
-        console.log('Error ', err);
+        console.error('Error ', err);
     });
 });
 
@@ -33,7 +33,7 @@ router.put('/draft/pick', (req, res) => {
         res.status(200).json({ success: true, data: data, user: req.user.username });
     })
     .catch(err => {
-        console.log('Error ', err);
+        console.error('Error ', err);
     });
 
 })
@@ -44,7 +44,7 @@ router.get('/players', (req, res) => {
         res.status(200).json({ success: true, data: data });
     })
     .catch(err => {
-        console.log('Error ', err);
+        console.error('Error ', err);
     });
 });
 
@@ -56,7 +56,7 @@ router.get('/keepers', (req, res) => {
         res.status(200).json({ success: true, data: data, user: req.user.username });
     })
     .catch(err => {
-        console.log('Error ', err);
+        console.error('Error ', err);
     });
 });
 
@@ -68,13 +68,11 @@ router.get('/keepers/:team', (req, res) => {
         res.status(200).json({ success: true, data: data, user: req.user.username });
     })
     .catch(err => {
-        console.log('Error ', err);
+        console.error('Error ', err);
     });
 });
 
 router.put('/keepers/:team', (req, res) => {
-    console.log(req.body);
-    console.log(req.params)
     knex('teams_players').where({ team: req.params.team.split("&").join(" "), name: req.body.name }).update(
         {
           keeper: req.body.keeper
@@ -83,7 +81,7 @@ router.put('/keepers/:team', (req, res) => {
         res.status(200).json({ success: true, data: data, user: req.user.username });
     })
     .catch(err => {
-        console.log('Error ', err);
+        console.error('Error ', err);
     });
 
 })
