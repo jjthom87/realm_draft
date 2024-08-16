@@ -1,14 +1,32 @@
-function loadHtml(res, draftDisplay){
+function getDraft(){
+    return fetch("/api/draft")
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){
+            return res.data;
+        })
+}
+
+async function loadHtml(res, draftDisplay){
     if(res.success){
         let user = res.user
         document.getElementById("page-container").innerHTML = "";
         let html = "";
 
         let welcomeHtml = "<h3>Welcome " + res.user + "</h3>";
+
         let buttonsHtml = '<div><button style="margin: 2px;" id="show-draft-button">Draft</button><button style="margin: 2px;" id="show-keepers-button">Keepers</button></div>'
 
         let draftHtml = '<div id="draft-section" style="display: '+draftDisplay+';">'
-        draftHtml += "<table>"
+
+        let currentPickHtml = "";
+        let draft = await getDraft()
+        let currentDraftPick = draft.find((dp) => dp.name == null)
+        currentPickHtml += `<a href=#current-pick>Current Pick: Round ${currentDraftPick.round}, Pick: ${currentDraftPick.pick}</a>`
+
+        draftHtml += currentPickHtml;
+        draftHtml += "<table>";
         draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Position</th></tr></thead>';
         
         fetch("/api/draft")
@@ -25,9 +43,9 @@ function loadHtml(res, draftDisplay){
                 if(dp.name == null){
                     if(dp.round == current.round && dp.pick == current.pick){
                         if(dp.team == user){
-                            draftTable += `<tr id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} id='player-pick-input'/><button id='submit-player-pick'>Submit</button></td><td>PENDING</td></tr>`
+                            draftTable += `<tr style='background-color: #add898; font-weight: bold;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} id='player-pick-input'/><button id='submit-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td></tr>`
                         } else {
-                            draftTable += `<tr id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td style="color: blue">CURRENT PICK</td><td>PENDING</td></tr>`   
+                            draftTable += `<tr style='background-color: #add898;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td style="color: #27477f">CURRENT PICK</td><td>PENDING</td></tr>`   
                         }
                     } else {
                         draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>PENDING</td><td>PENDING</td></tr>`
@@ -255,25 +273,64 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
     } else if (e.target.id == "submit-player-pick"){
         let playerPickInput = document.getElementById("player-pick-input");
         let playerPick = playerPickInput.value;
-        const draftPickObject = {
-            round: playerPickInput.getAttribute("round"),
-            pick: playerPickInput.getAttribute("pick"),
-            name: playerPick.split(",")[0],
-            position: playerPick.split(",")[1]
-        }
 
-        fetch("/api/draft/pick", {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(draftPickObject)
-        })
+        fetch("/api/players")
         .then(function(response){ 
             return response.json(); 
         })
-        .then(function(res){ 
-            loadHtml(res, "block")
+        .then(function(allPlayers){
+
+            fetch("/api/draft/players")
+            .then(function(response){ 
+                return response.json(); 
+            })
+            .then(function(draftPicks){
+
+                fetch("/api/keepers")
+                .then(function(response){ 
+                    return response.json(); 
+                })
+                .then(function(keepers){
+                    let players = allPlayers.data;
+                    let mappedPlayers = players.map((player)=> { 
+                        return player.name + ", " + player.position
+                    })
+                    mappedPlayers.forEach((player, index) => {
+                        if(draftPicks.data.includes(player.split(",")[0])){
+                            mappedPlayers.splice(index,1)
+                        }
+                        let mappedKeepers = keepers.data.map((keeper) => keeper.name);
+                        if(mappedKeepers.includes(player.split(",")[0])){
+                            mappedPlayers.splice(index,1)
+                        }
+                    });
+                    if(mappedPlayers.includes(playerPick)){
+                        const draftPickObject = {
+                            round: playerPickInput.getAttribute("round"),
+                            pick: playerPickInput.getAttribute("pick"),
+                            name: playerPick.split(",")[0],
+                            position: playerPick.split(",")[1]
+                        }
+                
+                        fetch("/api/draft/pick", {
+                            method: "PUT",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify(draftPickObject)
+                        })
+                        .then(function(response){ 
+                            return response.json(); 
+                        })
+                        .then(function(res){ 
+                            loadHtml(res, "block")
+                        });
+                    } else {
+                        alert("Player Not Available and/or Incorrect Input")
+                    }
+                    
+                });
+            });
         });
     } else if (e.target.id == "show-draft-button"){
         document.getElementById("keepers-section").style.display = "none"
@@ -296,7 +353,7 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
                 return response.json(); 
             })
             .then(function(teamKeepers){
-                if(teamKeepers.data.filter((tk) => tk.keeper == 1).length < 12 || !e.target.checked){
+                if(teamKeepers.data.filter((tk) => tk.keeper == 1).length < 14 || !e.target.checked){
                     let player = teamKeepers.data.find((tk) => tk.name == e.target.value.split("&").join(" "));
                     let keeper = player.keeper == 0 ? true : false;
                     fetch(`/api/keepers/${res.user.split(" ").join("&")}`, {
@@ -313,7 +370,7 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
                     });
                 } else {
                     e.target.checked = false;
-                    alert("Can only have 12 Keepers")
+                    alert("Can only have 14 Keepers")
                 }
             });
         });
