@@ -28,15 +28,6 @@ function getInitialAuthorization () {
         });
 }
 
-// getInitialAuthorization().then((res) => {
-//     console.log(res.data.access_token)
-        //ACCESS_TOKEN = res.data.access_token
-        //REFRESH_TOKEN = res.data.refresh_token
-
-        //makeApiRequest should be called in here
-
-// })
-
 function refreshAuthorizationToken (token) {
     return axios({
         url: `https://api.login.yahoo.com/oauth2/get_token`,
@@ -57,14 +48,14 @@ function refreshAuthorizationToken (token) {
     });       
 }
 
-async function makeAPIrequest (url) {
+async function makeAPIrequest(accessToken, refreshToken, url) {
     let response;
     try {
         response = await axios({
         url: url,
             method: 'get',
             headers: {
-                'Authorization': `Bearer ${ACCESS_TOKEN}`,
+                'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/x-www-form-urlencoded',
             }
         });
@@ -72,7 +63,7 @@ async function makeAPIrequest (url) {
         return jsonData;
     } catch (err) {
         if (err.response.data && err.response.data.error && err.response.data.error.description && err.response.data.error.description.includes("token_expired")) {
-            const newToken = await refreshAuthorizationToken(REFRESH_TOKEN);
+            const newToken = await refreshAuthorizationToken(refreshToken);
             if (newToken && newToken.data && newToken.data.access_token) {
                 let CREDENTIALS = newToken.data;
                 // Just a wrapper for fs.writeFile
@@ -82,79 +73,86 @@ async function makeAPIrequest (url) {
              }
         } else {
             console.error(err)
-            // console.error(`Error with credentials in makeAPIrequest()/refreshAuthorizationToken(): ${err}`);
             process.exit();
         }
     }
 }
 
+function loadPlayersToDb(){
+    getInitialAuthorization().then((res) => {
+        const access_token = res.data.access_token
+        const refresh_token = res.data.refresh_token
+    
+        let totalPlayers = 2200;
+        let start = 1;
+    
+        while(start < totalPlayers){
+            makeAPIrequest(access_token, refresh_token, `https://fantasysports.yahooapis.com/fantasy/v2/league/431.l.21149/players;start=${start}`).then((data) => {
+                const parser = new XMLParser();
+                let jObj = parser.parse(data);
+                const players = jObj.fantasy_content.league.players.player
+                players.forEach((player) => {
+                    knex('players')
+                    .insert({
+                        name: player.name.full,
+                        position: player.primary_position,
+                        team: player.editorial_team_full_name
+                    })
+                    .then(res => {
+                        console.log(res)
+                    })
+                    .catch(err => {
+                    console.log('Error creating a user', err);
+                    });
+                })
+            });
+            start += 25;
+        }
+    })
+}
+
+function loadTeamsPlayersToDb(){
+    getInitialAuthorization().then((res) => {
+        const access_token = res.data.access_token
+        const refresh_token = res.data.refresh_token
+    
+        let totalTeams = 14;
+        let start = 1
+        while(start <= totalTeams){
+            makeAPIrequest(access_token, refresh_token, `https://fantasysports.yahooapis.com/fantasy/v2/team/431.l.21149.t.${start}/roster`).then((data) => {
+                const parser = new XMLParser();
+                let jObj = parser.parse(data);
+                let teamName = jObj.fantasy_content.team.name;
+                if(teamName.includes("Big Wood")){
+                    teamName = "Big Wood Bison"
+                } else if (teamName.includes("Loss of")){
+                    teamName = "Loss of Foresight"
+                }
+                const roster = jObj.fantasy_content.team.roster.players.player;
+                roster.forEach((player) => {
+                    knex('teams_players')
+                    .insert({
+                      name: player.name.full,
+                      position: player.primary_position,
+                      team: teamName,
+                      player_team: player.editorial_team_full_name
+                    })
+                    .then(res => {
+                        console.log(res)
+                    })
+                    .catch(err => {
+                      console.log('Error creating a user', err);
+                    });
+                })
+            });
+            start++;
+        }
+    })
+}
+
+// loadTeamsPlayersToDb();
+
 // makeAPIrequest("https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games;game_keys=mlb/teams")
 
 // makeAPIrequest("https://fantasysports.yahooapis.com/fantasy/v2/league/431.l.21149/teams")
 // makeAPIrequest("https://fantasysports.yahooapis.com/fantasy/v2/league/431.l.21149/players;start=1,count=25")
-
-let totalPlayers = 2200;
-let start = 1;
-
-// while(start < totalPlayers){
-//     makeAPIrequest(`https://fantasysports.yahooapis.com/fantasy/v2/league/431.l.21149/players;start=${start}`).then((data) => {
-//         const parser = new XMLParser();
-//         let jObj = parser.parse(data);
-//         const players = jObj.fantasy_content.league.players.player
-//         players.forEach((player) => {
-//             knex('players')
-//             .insert({
-//               name: player.name.full,
-//               position: player.primary_position
-//             })
-//             .then(res => {
-//               // Pass the user object to serialize function
-//             //   done(null, { id: userId[0] });
-//                 console.log(res)
-//             })
-//             .catch(err => {
-//               console.log('Error creating a user', err);
-//             });
-//         })
-//     });
-//     start += 25;
-// }
-
-// let totalTeams = 14;
-// while(start < totalTeams){
-    // makeAPIrequest(`https://fantasysports.yahooapis.com/fantasy/v2/team/431.l.21149.t.14/roster`).then((data) => {
-    //     const parser = new XMLParser();
-    //     let jObj = parser.parse(data);
-    //     let teamName = jObj.fantasy_content.team.name;
-    //     if(teamName.includes("Big Wood")){
-    //         teamName = "Big Wood Bison"
-    //     } else if (teamName.includes("Loss of")){
-    //         teamName = "Loss of Foresight"
-    //     }
-    //     const roster = jObj.fantasy_content.team.roster.players.player;
-    //     roster.forEach((player) => {
-            // knex('teams_players')
-            // .insert({
-            //   name: player.name.full,
-            //   position: player.primary_position,
-            //   team: teamName
-            // })
-            // .then(res => {
-            //   // Pass the user object to serialize function
-            // //   done(null, { id: userId[0] });
-            //     console.log(res)
-            // })
-            // .catch(err => {
-            //   console.log('Error creating a user', err);
-            // });
-    //     })
-    // });
-//     start++;
-// }
-
-// knex('players')
-// .select("*")
-// .then(players => {
-//     // If user is found, pass the user object to serialize function
-//     console.log(players)
-// });

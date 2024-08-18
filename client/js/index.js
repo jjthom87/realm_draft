@@ -8,6 +8,109 @@ function getDraft(){
         })
 }
 
+let teamsMap = {
+    "New York Yankees": "NYY",
+    "New York Mets": "NYM",
+    "Chicago Cubs": "CHC",
+    "Arizona Diamondback": "AZ",
+    "Philadelphia Phillies": "PHI",
+    "Oakland Athletics": "OAK",
+    "San Francisco Giants": "SF",
+    "San Diego Padres": "SD",
+    "Los Angeles Dodgers": "LAD",
+    "Los Angeles Angels": "LAA",
+    "Boston Red Sox": "BOS",
+    "Atlanta Braves": "ATL",
+    "Cincinnati Reds": "CIN",
+    "St. Louis Cardinals": "STL",
+    "Cleveland Guardians": "CLE",
+    "Pittsburgh Pirates": "PIT",
+    "Chicago White Sox": "CWS",
+    "Miami Marlins": "MIA",
+    "Tampa Bay Rays": "TB",
+    "Baltimore Orioles": "BAL",
+    "Detroit Tigers": "DET",
+    "Toronto Blue Jays": "TOR",
+    "Kansas City Royals": "KC",
+    "Milwaukee Brewers": "MIL",
+    "Minnesota Twins": "MIN",
+    "Houston Astros": "HOU",
+    "Texas Rangers": "TEX",
+    "Colorado Rockies": "COL",
+    "Seattle Mariners": "SEA",
+    "Washington Nationals": "WSH",
+    
+    "NYY": "New York Yankees",
+    "NYM": "New York Mets",
+    "CHC": "Chicago Cubs",
+    "AZ": "Arizona Diamondback",
+    "PHI": "Philadelphia Phillies",
+    "OAK": "Oakland Athletics",
+    "SF": "San Francisco Giants",
+    "SD": "San Diego Padres",
+    "LAD": "Los Angeles Dodgers",
+    "LAA": "Los Angeles Angels",
+    "BOS": "Boston Red Sox",
+    "ATL": "Atlanta Braves",
+    "CIN": "Cincinnati Reds",
+    "STL": "St. Louis Cardinals",
+    "CLE": "Cleveland Guardians",
+    "PIT": "Pittsburgh Pirates",
+    "CWS": "Chicago White Sox",
+    "MIA": "Miami Marlins",
+    "TB": "Tampa Bay Rays",
+    "BAL": "Baltimore Orioles",
+    "DET": "Detroit Tigers",
+    "TOR": "Toronto Blue Jays",
+    "KC": "Kansas City Royals",
+    "MIL": "Milwaukee Brewers",
+    "MIN": "Minnesota Twins",
+    "HOU": "Houston Astros",
+    "TEX": "Texas Rangers",
+    "COL": "Colorado Rockies",
+    "SEA": "Seattle Mariners",
+    "WSH": "Washington Nationals"
+}
+
+function allAvailablePlayersToDraft(){
+    return fetch("/api/players")
+    .then(function(response){ 
+        return response.json(); 
+    })
+    .then(function(allPlayers){
+        return fetch("/api/draft/players")
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(draftPicks){
+            return fetch("/api/keepers")
+            .then(function(response){ 
+                return response.json(); 
+            })
+            .then(function(keepers){
+                let players = allPlayers.data;
+                let mappedPlayers = players.map((player)=> { 
+                    return player.name + ", " + teamsMap[player.team] + " - " + player.position
+                })
+                mappedPlayers.forEach((player, index) => {
+                    if(draftPicks.data.includes(player.split(",")[0])){
+                        mappedPlayers.splice(index,1)
+                    }
+                    let mappedKeepers = keepers.data.map((keeper) => keeper.name);
+                    if(mappedKeepers.includes(player.split(",")[0])){
+                        mappedPlayers.splice(index,1)
+                    }
+                });
+                return mappedPlayers;
+            });
+        });
+    });
+}
+
+async function availablePlayersToDraft(){
+    return await allAvailablePlayersToDraft();
+}
+
 async function loadHtml(res, draftDisplay){
     if(res.success){
         let user = res.user
@@ -27,7 +130,7 @@ async function loadHtml(res, draftDisplay){
 
         draftHtml += currentPickHtml;
         draftHtml += "<table>";
-        draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Position</th></tr></thead>';
+        draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col">Position</th></tr></thead>';
         
         fetch("/api/draft")
         .then(function(response){ 
@@ -42,16 +145,16 @@ async function loadHtml(res, draftDisplay){
 
                 if(dp.name == null){
                     if(dp.round == current.round && dp.pick == current.pick){
-                        if(dp.team == user){
-                            draftTable += `<tr style='background-color: #add898; font-weight: bold;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} id='player-pick-input'/><button id='submit-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td></tr>`
-                        } else {
-                            draftTable += `<tr style='background-color: #add898;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td style="color: #27477f">CURRENT PICK</td><td>PENDING</td></tr>`   
-                        }
+                        // if(dp.team == user){
+                             draftTable += `<tr style='background-color: #add898; font-weight: bold;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} id='player-pick-input'/><button id='submit-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
+                        // } else {
+                        //     draftTable += `<tr style='background-color: #add898;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td style="color: #27477f">CURRENT PICK</td><td>PENDING</td></tr>`   
+                        // }
                     } else {
-                        draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>PENDING</td><td>PENDING</td></tr>`
+                        draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>PENDING</td><td>PENDING</td><td>PENDING</td></tr>`
                     }
                 } else {
-                    draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.position}</td></tr>`
+                    draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
                 }
             });
 
@@ -65,11 +168,7 @@ async function loadHtml(res, draftDisplay){
             })
             .then(function(teamKeepers){
                 teamKeepers.data.forEach((tk) => {
-                    if(tk.keeper == 1){
-                        keepersHtml += `<li><input class="keepers-checkbox" type="checkbox" checked value=${tk.name.split(" ").join("&")} /> ${tk.name}</li>`
-                    } else {
-                        keepersHtml += `<li><input class="keepers-checkbox" type="checkbox" value=${tk.name.split(" ").join("&")} /> ${tk.name}</li>`
-                    }
+                    keepersHtml += `<li><input class="keepers-checkbox" type="checkbox" ${tk.keeper == 1 ? 'checked' : ''} value=${tk.name.split(" ").join("&")} /> ${tk.name}, ${teamsMap[tk.player_team]} - ${tk.position}</li>`
                 })
                 keepersHtml += "</ul></div>"
     
@@ -123,6 +222,7 @@ function autocomplete(inp, arr) {
           if (arr[i].split(",")[0].substr(0, val.length).toUpperCase() == val.toUpperCase()) {
             /*create a DIV element for each matching element:*/
             b = document.createElement("DIV");
+            b.classList.add("player-search-results")
             /*make the matching letters bold:*/
             b.innerHTML = "<strong>" + arr[i].substr(0, val.length) + "</strong>";
             b.innerHTML += arr[i].substr(val.length);
@@ -195,45 +295,24 @@ function autocomplete(inp, arr) {
     document.addEventListener("click", function (e) {
         closeAllLists(e.target);
     });
+    document.getElementsByTagName("body")[0].addEventListener("mouseover", function(e){
+        if(e.target.parentElement && e.target.parentElement.classList.contains('autocomplete-items')){
+            var x = document.getElementsByClassName("autocomplete-items")[0].children;
+            for(let i = 0; i < x.length; i++){
+                if(x[i].innerText == e.target.innerText){
+                    currentFocus = i
+                }
+            }
+            addActive(x)
+        }
+    })
   }
 
 document.getElementsByTagName("body")[0].addEventListener("keypress", function(e){
     if(e.target.id == "player-pick-input"){
-
-        fetch("/api/players")
-        .then(function(response){ 
-            return response.json(); 
+        availablePlayersToDraft().then((availablePlayersToDraft) => {
+            autocomplete(document.getElementById("player-pick-input"), availablePlayersToDraft)
         })
-        .then(function(allPlayers){
-
-            fetch("/api/draft/players")
-            .then(function(response){ 
-                return response.json(); 
-            })
-            .then(function(draftPicks){
-
-                fetch("/api/keepers")
-                .then(function(response){ 
-                    return response.json(); 
-                })
-                .then(function(keepers){
-                    let players = allPlayers.data;
-                    let mappedPlayers = players.map((player)=> { 
-                        return player.name + ", " + player.position
-                    })
-                    mappedPlayers.forEach((player, index) => {
-                        if(draftPicks.data.includes(player.split(",")[0])){
-                            mappedPlayers.splice(index,1)
-                        }
-                        let mappedKeepers = keepers.data.map((keeper) => keeper.name);
-                        if(mappedKeepers.includes(player.split(",")[0])){
-                            mappedPlayers.splice(index,1)
-                        }
-                    })
-                    autocomplete(document.getElementById("player-pick-input"), mappedPlayers)
-                });
-            });
-        });
     }
 })
 
@@ -274,64 +353,33 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
         let playerPickInput = document.getElementById("player-pick-input");
         let playerPick = playerPickInput.value;
 
-        fetch("/api/players")
-        .then(function(response){ 
-            return response.json(); 
-        })
-        .then(function(allPlayers){
-
-            fetch("/api/draft/players")
-            .then(function(response){ 
-                return response.json(); 
-            })
-            .then(function(draftPicks){
-
-                fetch("/api/keepers")
+        availablePlayersToDraft().then((availablePlayersToDraft) => {
+            if(availablePlayersToDraft.includes(playerPick)){
+                const draftPickObject = {
+                    round: playerPickInput.getAttribute("round"),
+                    pick: playerPickInput.getAttribute("pick"),
+                    name: playerPick.split(",")[0],
+                    player_team: teamsMap[playerPick.split(", ")[1].split(" - ")[0]],
+                    position: playerPick.split(",")[1].split(" - ")[1]
+                }
+        
+                fetch("/api/draft/pick", {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(draftPickObject)
+                })
                 .then(function(response){ 
                     return response.json(); 
                 })
-                .then(function(keepers){
-                    let players = allPlayers.data;
-                    let mappedPlayers = players.map((player)=> { 
-                        return player.name + ", " + player.position
-                    })
-                    mappedPlayers.forEach((player, index) => {
-                        if(draftPicks.data.includes(player.split(",")[0])){
-                            mappedPlayers.splice(index,1)
-                        }
-                        let mappedKeepers = keepers.data.map((keeper) => keeper.name);
-                        if(mappedKeepers.includes(player.split(",")[0])){
-                            mappedPlayers.splice(index,1)
-                        }
-                    });
-                    if(mappedPlayers.includes(playerPick)){
-                        const draftPickObject = {
-                            round: playerPickInput.getAttribute("round"),
-                            pick: playerPickInput.getAttribute("pick"),
-                            name: playerPick.split(",")[0],
-                            position: playerPick.split(",")[1]
-                        }
-                
-                        fetch("/api/draft/pick", {
-                            method: "PUT",
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify(draftPickObject)
-                        })
-                        .then(function(response){ 
-                            return response.json(); 
-                        })
-                        .then(function(res){ 
-                            loadHtml(res, "block")
-                        });
-                    } else {
-                        alert("Player Not Available and/or Incorrect Input")
-                    }
-                    
+                .then(function(res){ 
+                    loadHtml(res, "block")
                 });
-            });
-        });
+            } else {
+                alert("Player Not Available and/or Incorrect Input")
+            }
+        })
     } else if (e.target.id == "show-draft-button"){
         document.getElementById("keepers-section").style.display = "none"
         document.getElementById("draft-section").style.display = document.getElementById("draft-section").style.display == "none" ? "block" : "none"

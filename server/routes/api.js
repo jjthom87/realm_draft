@@ -3,7 +3,7 @@ const router = express.Router();
 const knex = require('knex')(require('../knexfile.js'));
 
 router.get('/draft', (req, res) => {
-    knex('sorted_draft')
+    knex('draft')
     .then(data => {
         res.status(200).json({ success: true, data: data });
     })
@@ -13,7 +13,7 @@ router.get('/draft', (req, res) => {
 });
 
 router.get('/draft/players', (req, res) => {
-    knex('sorted_draft')
+    knex('draft')
     .select("name")
     .then(data => {
         res.status(200).json({ success: true, data: data.filter((d) => d.name != null).map((d) => d.name) });
@@ -24,11 +24,12 @@ router.get('/draft/players', (req, res) => {
 });
 
 router.put('/draft/pick', (req, res) => {
-    knex('sorted_draft').where({ round: req.body.round, pick: req.body.pick }).update(
+    knex('draft').where({ round: req.body.round, pick: req.body.pick }).update(
         {
           name: req.body.name,
-          position: req.body.position
-        },
+          position: req.body.position,
+          player_team: req.body.player_team
+        }
     ).then(data => {
         res.status(200).json({ success: true, data: data, user: req.user.username });
     })
