@@ -94,3 +94,8 @@ tfoot td {
     background-color: DodgerBlue !important; 
     color: #ffffff; 
   }
+
+  .highlight-row {
+    background-color: #76a8eb;
+    font-weight: bold;
+  }

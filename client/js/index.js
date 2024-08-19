@@ -363,7 +363,17 @@ document.getElementsByTagName("body")[0].addEventListener("keydown", function(e)
         let playerSearchHtml = "";
         for(let i = 0; i < teamsPlayersHtml.length; i++){
             if(teamsPlayersHtml[i].toLowerCase().includes('<li class="team-player-li">'+playerSearchValue.toLowerCase())){
-                playerSearchHtml += teamsPlayersHtml[i]
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(teamsPlayersHtml[i], "application/xml");
+                const playerListItems = doc.children[0].children[1].children
+                for(let j = 0; j < playerListItems.length; j++){
+                    if(playerListItems[j].innerHTML.toLowerCase().includes(playerSearchValue.toLowerCase())){
+                        playerListItems[j].classList.add("highlight-row");
+                    }
+                }
+                const serializer = new XMLSerializer();
+                const xmlStr = serializer.serializeToString(doc);
+                playerSearchHtml += xmlStr
             }
         }
         document.getElementById("all-teams-div").innerHTML = playerSearchHtml;
