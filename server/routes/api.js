@@ -49,6 +49,27 @@ router.get('/players', (req, res) => {
     });
 });
 
+router.get('/teams', (req, res) => {
+    knex('teams_players')
+    .then(data => {
+        res.status(200).json({ success: true, data: data });
+    })
+    .catch(err => {
+        console.error('Error ', err);
+    });
+});
+
+router.get('/teams/:team', (req, res) => {
+    knex('teams_players')
+        .where({team: req.params.team.split("&").join(" ")})
+    .then(data => {
+        res.status(200).json({ success: true, data: data });
+    })
+    .catch(err => {
+        console.error('Error ', err);
+    });
+});
+
 router.get('/keepers', (req, res) => {
     knex('teams_players')
         .select('*')

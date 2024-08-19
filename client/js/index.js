@@ -8,6 +8,28 @@ function getDraft(){
         })
 }
 
+function getKeepers(team){
+    let api = team != null ? `/api/keepers/${team}` : '/api/keepers'
+    return fetch(api)
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){
+            return res.data;
+        })
+}
+
+function getAllTeams(team){
+    let api = team != null ? `/api/teams/${team}` : '/api/teams'
+    return fetch(api)
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){
+            return res.data;
+        })
+}
+
 let teamsMap = {
     "New York Yankees": "NYY",
     "New York Mets": "NYM",
@@ -119,7 +141,7 @@ async function loadHtml(res, draftDisplay){
 
         let welcomeHtml = "<h3>Welcome " + res.user + "</h3>";
 
-        let buttonsHtml = '<div><button style="margin: 2px;" id="show-draft-button">Draft</button><button style="margin: 2px;" id="show-keepers-button">Keepers</button></div>'
+        let buttonsHtml = '<div><button style="margin: 2px;" id="show-draft-button">Draft</button><button style="margin: 2px;" id="show-keepers-button">Keepers</button><button style="margin: 2px;" id="show-all-teams-button">Teams</button></div>'
 
         let draftHtml = '<div id="draft-section" style="display: '+draftDisplay+';">'
 
@@ -131,55 +153,62 @@ async function loadHtml(res, draftDisplay){
         draftHtml += currentPickHtml;
         draftHtml += "<table>";
         draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col">Position</th></tr></thead>';
-        
-        fetch("/api/draft")
-        .then(function(response){ 
-            return response.json(); 
-        })
-        .then(function(res){
-            let draftArray = res.data;
-            let draftTable = ""
-            let current = draftArray.find((dp) => dp.name == null)
-            draftArray.forEach((dp) => {
-                let userHtml = dp.team == user ? 'style="color: red"' : ''
 
-                if(dp.name == null){
-                    if(dp.round == current.round && dp.pick == current.pick){
-                        // if(dp.team == user){
-                             draftTable += `<tr style='background-color: #add898; font-weight: bold;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} id='player-pick-input'/><button id='submit-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
-                        // } else {
-                        //     draftTable += `<tr style='background-color: #add898;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td style="color: #27477f">CURRENT PICK</td><td>PENDING</td></tr>`   
-                        // }
-                    } else {
-                        draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>PENDING</td><td>PENDING</td><td>PENDING</td></tr>`
-                    }
+        let draftTable = ""
+        let current = draft.find((dp) => dp.name == null)
+        draft.forEach((dp) => {
+            let userHtml = dp.team == user ? 'style="color: red"' : ''
+
+            if(dp.name == null){
+                if(dp.round == current.round && dp.pick == current.pick){
+                    // if(dp.team == user){
+                            draftTable += `<tr style='background-color: #add898; font-weight: bold;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} id='player-pick-input'/><button id='submit-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
+                    // } else {
+                    //     draftTable += `<tr style='background-color: #add898;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td style="color: #27477f">CURRENT PICK</td><td>PENDING</td></tr>`   
+                    // }
                 } else {
-                    draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
+                    draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>PENDING</td><td>PENDING</td><td>PENDING</td></tr>`
                 }
-            });
-
-            draftHtml += draftTable
-            draftHtml += '</table></div>'
-
-            let keepersHtml = "<div id='keepers-section' style='display: none; margin-left: -38px;'><ul style='list-style-type: none;'>"
-            fetch(`/api/keepers/${user.split("&").join("")}`)
-            .then(function(response){ 
-                return response.json(); 
-            })
-            .then(function(teamKeepers){
-                teamKeepers.data.forEach((tk) => {
-                    keepersHtml += `<li><input class="keepers-checkbox" type="checkbox" ${tk.keeper == 1 ? 'checked' : ''} value=${tk.name.split(" ").join("&")} /> ${tk.name}, ${teamsMap[tk.player_team]} - ${tk.position}</li>`
-                })
-                keepersHtml += "</ul></div>"
-    
-                html += welcomeHtml
-                html += buttonsHtml
-                html += draftHtml
-                html += keepersHtml
-        
-                document.getElementById("page-container").innerHTML = html;
-            });
+            } else {
+                draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
+            }
         });
+        draftHtml += draftTable
+        draftHtml += '</table></div>'
+
+        let keepersHtml = "<div id='keepers-section' style='display: none; margin-left: -38px;'><ul style='list-style-type: none;'>"
+        let teamKeepers = await getKeepers(user.split("&").join(""))
+        teamKeepers.forEach((tk) => {
+            keepersHtml += `<li><input class="keepers-checkbox" type="checkbox" ${tk.keeper == 1 ? 'checked' : ''} value=${tk.name.split(" ").join("&")} /> ${tk.name}, ${teamsMap[tk.player_team]} - ${tk.position}</li>`
+        })
+        keepersHtml += "</ul></div>"
+
+        let allTeamsSectionHtml = "<div id='all-teams-section' style='display: none;'><br><input id='search-team-player' placeholder='Search Player'/><br><br><div id='all-teams-div' style='display: ruby;'>";
+        let teams = await getAllTeams();
+        let teamNames = new Set(teams.map((team) => team.team))
+        let allTeamsMap = {};
+        teams.forEach((team) => {
+            if(allTeamsMap[team.team] == null){
+                allTeamsMap[team.team] = [];
+            }
+            allTeamsMap[team.team].push(team.name)
+        })
+        teamNames.forEach((teamName) => {
+            allTeamsSectionHtml += `<div class='well teams-players-well' id="${teamName.split(" ").join("&")}-well" style='width: 300px; margin: 3px;'><h3>${teamName}</h3><ul id="${teamName.split(" ").join("&")}-team-list" style='list-style-type: none;'>`
+            allTeamsMap[teamName].forEach((player) => {
+                allTeamsSectionHtml += "<li class='team-player-li'>"+player+"</li>"
+            })
+            allTeamsSectionHtml += "</ul></div>"
+        })
+        allTeamsSectionHtml += "</div></div>"
+
+        html += welcomeHtml
+        html += buttonsHtml
+        html += draftHtml
+        html += keepersHtml
+        html += allTeamsSectionHtml
+
+        document.getElementById("page-container").innerHTML = html;
     } else {
         document.getElementById("page-container").innerHTML = "";
         let html = ""
@@ -308,11 +337,36 @@ function autocomplete(inp, arr) {
     })
   }
 
-document.getElementsByTagName("body")[0].addEventListener("keypress", function(e){
+let playerSearchValue = "";
+const teamsPlayersHtml = []
+let keydownOnce = false;
+document.getElementsByTagName("body")[0].addEventListener("keydown", function(e){
     if(e.target.id == "player-pick-input"){
         availablePlayersToDraft().then((availablePlayersToDraft) => {
             autocomplete(document.getElementById("player-pick-input"), availablePlayersToDraft)
         })
+    } else if (e.target.id == "search-team-player"){
+        let teamsPlayersSections = document.getElementsByClassName('teams-players-well');
+        if(!keydownOnce){
+            for(let i = 0; i < teamsPlayersSections.length; i++){
+                teamsPlayersHtml.push(teamsPlayersSections[i].outerHTML)
+            }
+            keydownOnce = true;
+        }
+        
+        if(e.key == "Backspace"){
+            playerSearchValue = playerSearchValue.substring(0, playerSearchValue.length - 1)
+        } else {
+            playerSearchValue += e.key
+        }
+
+        let playerSearchHtml = "";
+        for(let i = 0; i < teamsPlayersHtml.length; i++){
+            if(teamsPlayersHtml[i].toLowerCase().includes('<li class="team-player-li">'+playerSearchValue.toLowerCase())){
+                playerSearchHtml += teamsPlayersHtml[i]
+            }
+        }
+        document.getElementById("all-teams-div").innerHTML = playerSearchHtml;
     }
 })
 
@@ -381,15 +435,26 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
             }
         })
     } else if (e.target.id == "show-draft-button"){
-        document.getElementById("keepers-section").style.display = "none"
+        document.getElementById("keepers-section").style.display = "none";
+        document.getElementById("all-teams-section").style.display = "none"
         document.getElementById("draft-section").style.display = document.getElementById("draft-section").style.display == "none" ? "block" : "none"
         document.getElementById("show-draft-button").style.color = document.getElementById("draft-section").style.display == "none" ? "black" : "red"
         document.getElementById("show-keepers-button").style.color = "black";
+        document.getElementById("show-all-teams-button").style.color = "black";
     } else if (e.target.id == "show-keepers-button"){
-        document.getElementById("draft-section").style.display = "none"
+        document.getElementById("draft-section").style.display = "none";
+        document.getElementById("all-teams-section").style.display = "none"
         document.getElementById("keepers-section").style.display = document.getElementById("keepers-section").style.display == "none" ? "block" : "none";
-        document.getElementById("show-keepers-button").style.color = document.getElementById("keepers-section").style.display == "none" ? "black" : "red"
+        document.getElementById("show-keepers-button").style.color = document.getElementById("keepers-section").style.display == "none" ? "black" : "red";
         document.getElementById("show-draft-button").style.color = "black";
+        document.getElementById("show-all-teams-button").style.color = "black";
+    } else if (e.target.id == "show-all-teams-button"){
+        document.getElementById("draft-section").style.display = "none";
+        document.getElementById("keepers-section").style.display = "none"
+        document.getElementById("all-teams-section").style.display = document.getElementById("all-teams-section").style.display == "none" ? "ruby" : "none";
+        document.getElementById("show-all-teams-button").style.color = document.getElementById("all-teams-section").style.display == "none" ? "black" : "red";
+        document.getElementById("show-draft-button").style.color = "black";
+        document.getElementById("show-keepers-button").style.color = "black";
     } else if (e.target.classList.contains("keepers-checkbox")){
         fetch("/auth/signed-in")
         .then(function(response){ 
