@@ -184,8 +184,9 @@ async function loadHtml(res, draftDisplay){
         })
         keepersHtml += "</ul></div>"
 
-        let allTeamsSectionHtml = "<div id='all-teams-section' style='display: none;'><br><input id='search-team-player' placeholder='Search Player'/><br><br><div id='all-teams-div' style='display: ruby;'>";
+        let allTeamsSectionHtml = "<div id='all-teams-section' style='display: none;'><br><input id='search-team-player' placeholder='Search Player or Team Name' style='width: 200px; display: block; margin: 0 auto;'/><br><br><div id='all-teams-div' style='display: ruby;'>";
         let teams = await getAllTeams();
+        let allKeepers = await getKeepers();
         let teamNames = new Set(teams.map((team) => team.team))
         let allTeamsMap = {};
         teams.forEach((team) => {
@@ -197,7 +198,11 @@ async function loadHtml(res, draftDisplay){
         teamNames.forEach((teamName) => {
             allTeamsSectionHtml += `<div class='well teams-players-well' id="${teamName.split(" ").join("&")}-well" style='width: 300px; margin: 3px;'><h3>${teamName}</h3><ul id="${teamName.split(" ").join("&")}-team-list" style='list-style-type: none;'>`
             allTeamsMap[teamName].forEach((player) => {
-                allTeamsSectionHtml += "<li class='team-player-li'>"+player+"</li>"
+                if(allKeepers.map((k) => k.name).includes(player)){
+                    allTeamsSectionHtml += "<li class='team-player-li' style='text-decoration: line-through; color: red;'>"+player+"</li>"
+                } else {
+                    allTeamsSectionHtml += "<li class='team-player-li'>"+player+"</li>"
+                }
             })
             allTeamsSectionHtml += "</ul></div>"
         })
@@ -249,7 +254,8 @@ function autocomplete(inp, arr) {
         /*for each item in the array...*/
         for (i = 0; i < arr.length; i++) {
           /*check if the item starts with the same letters as the text field value:*/
-          if (arr[i].split(",")[0].substr(0, val.length).toUpperCase() == val.toUpperCase()) {
+        //   if (arr[i].split(",")[0].substr(0, val.length).toUpperCase() == val.toUpperCase()) {
+          if (arr[i].split(",")[0].toUpperCase().includes(val.toUpperCase())) {
             /*create a DIV element for each matching element:*/
             b = document.createElement("DIV");
             b.classList.add("player-search-results")
@@ -363,13 +369,15 @@ document.getElementsByTagName("body")[0].addEventListener("keydown", function(e)
 
         let playerSearchHtml = "";
         for(let i = 0; i < teamsPlayersHtml.length; i++){
-            if(teamsPlayersHtml[i].toLowerCase().includes('<li class="team-player-li">'+playerSearchValue.toLowerCase())){
+            if(teamsPlayersHtml[i].toLowerCase().includes('<li class="team-player-li">') && teamsPlayersHtml[i].toLowerCase().includes(playerSearchValue.toLowerCase())){
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(teamsPlayersHtml[i], "application/xml");
                 const playerListItems = doc.children[0].children[1].children
                 for(let j = 0; j < playerListItems.length; j++){
                     if(playerListItems[j].innerHTML.toLowerCase().includes(playerSearchValue.toLowerCase())){
-                        playerListItems[j].classList.add("highlight-row");
+                        if(playerSearchValue != ""){
+                            playerListItems[j].classList.add("highlight-row");
+                        }
                     }
                 }
                 const serializer = new XMLSerializer();
@@ -462,7 +470,7 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
     } else if (e.target.id == "show-all-teams-button"){
         document.getElementById("draft-section").style.display = "none";
         document.getElementById("keepers-section").style.display = "none"
-        document.getElementById("all-teams-section").style.display = document.getElementById("all-teams-section").style.display == "none" ? "ruby" : "none";
+        document.getElementById("all-teams-section").style.display = document.getElementById("all-teams-section").style.display == "none" ? "inline" : "none";
         document.getElementById("show-all-teams-button").style.color = document.getElementById("all-teams-section").style.display == "none" ? "black" : "red";
         document.getElementById("show-draft-button").style.color = "black";
         document.getElementById("show-keepers-button").style.color = "black";
