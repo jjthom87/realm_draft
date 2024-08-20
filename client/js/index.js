@@ -151,6 +151,7 @@ async function loadHtml(res, draftDisplay){
         currentPickHtml += `<a href=#current-pick>Current Pick: Round ${currentDraftPick.round}, Pick: ${currentDraftPick.pick}</a>`
 
         draftHtml += currentPickHtml;
+        draftHtml += "<button style='background-color: red; color: white; float: right;' id='reset-draft-button'>Reset Draft</button>"
         draftHtml += "<table>";
         draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col">Position</th></tr></thead>';
 
@@ -497,5 +498,21 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
                 }
             });
         });
+    } else if (e.target.id == "reset-draft-button"){
+        let resetDraftDecision = prompt("Confirming that you want to reset the draft. Type 'y' if you want to.");
+        if(resetDraftDecision == "y"){
+            fetch("/api/draft/reset", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            })
+            .then(function(response){ 
+                return response.json(); 
+            })
+            .then(function(res){ 
+                loadHtml(res, "block")
+            });
+        }
     }
 })

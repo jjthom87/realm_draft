@@ -36,7 +36,21 @@ router.put('/draft/pick', (req, res) => {
     .catch(err => {
         console.error('Error ', err);
     });
+})
 
+router.get('/draft/reset', (req,res) => {
+    knex('draft').update(
+        {
+          name: null,
+          position: null,
+          player_team: null
+        }
+    ).then(data => {
+        res.status(200).json({ success: true, data: data, user: req.user.username });
+    })
+    .catch(err => {
+        console.error('Error ', err);
+    });
 })
 
 router.get('/players', (req, res) => {
