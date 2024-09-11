@@ -78,12 +78,38 @@ async function makeAPIrequest(accessToken, refreshToken, url) {
     }
 }
 
+function setPlayerPositions(playerPositions){
+    let positionsNotToDb = ["NA", "IL", "CI", "MI"]
+    let playerPositionsToDb = [];
+    for(let i = 0; i < playerPositions.length; i++){
+        if(!positionsNotToDb.includes(playerPositions[i])){
+            playerPositionsToDb.push(playerPositions[i])
+        }
+    }
+
+    if(playerPositionsToDb.includes("SP") && playerPositionsToDb.includes("RP")){
+        return "SP,RP";
+    } else if (playerPositionsToDb.includes("SP") && !playerPositionsToDb.includes("RP")){
+        return "SP";
+    } else if (playerPositionsToDb.includes("RP") && !playerPositionsToDb.includes("SP")){
+        return "RP";
+    } else if (!playerPositionsToDb.includes("RP") && !playerPositionsToDb.includes("SP") && playerPositionsToDb.includes("P")){
+        return "P";
+    } else if (playerPositionsToDb.length == 1 && playerPositionsToDb.includes("Util")){
+        return "Util";
+    } else {
+        playerPositionsToDb.splice(playerPositionsToDb.indexOf("Util"),1)
+        return playerPositionsToDb.join(",")
+    }
+}
+
 function loadPlayersToDb(){
     getInitialAuthorization().then((res) => {
         const access_token = res.data.access_token
         const refresh_token = res.data.refresh_token
     
         let totalPlayers = 2200;
+        // let totalPlayers = 100;
         let start = 1;
     
         while(start < totalPlayers){
@@ -92,10 +118,11 @@ function loadPlayersToDb(){
                 let jObj = parser.parse(data);
                 const players = jObj.fantasy_content.league.players.player
                 players.forEach((player) => {
+                    const playerPositions = player.eligible_positions.position;
                     knex('players')
                     .insert({
                         name: player.name.full,
-                        position: player.primary_position,
+                        position: setPlayerPositions(playerPositions),
                         team: player.editorial_team_full_name
                     })
                     .then(res => {
@@ -110,6 +137,7 @@ function loadPlayersToDb(){
         }
     })
 }
+// loadPlayersToDb();
 
 function loadTeamsPlayersToDb(){
     getInitialAuthorization().then((res) => {
@@ -130,10 +158,11 @@ function loadTeamsPlayersToDb(){
                 }
                 const roster = jObj.fantasy_content.team.roster.players.player;
                 roster.forEach((player) => {
+                    const playerPositions = player.eligible_positions.position;
                     knex('teams_players')
                     .insert({
                       name: player.name.full,
-                      position: player.primary_position,
+                      position: setPlayerPositions(playerPositions),
                       team: teamName,
                       player_team: player.editorial_team_full_name
                     })
@@ -149,7 +178,6 @@ function loadTeamsPlayersToDb(){
         }
     })
 }
-
 // loadTeamsPlayersToDb();
 
 // makeAPIrequest("https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games;game_keys=mlb/teams")
