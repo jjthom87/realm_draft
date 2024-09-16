@@ -108,7 +108,7 @@ function loadPlayersToDb(){
         const access_token = res.data.access_token
         const refresh_token = res.data.refresh_token
     
-        let totalPlayers = 2200;
+        let totalPlayers = 2225;
         // let totalPlayers = 100;
         let start = 1;
     
@@ -117,13 +117,14 @@ function loadPlayersToDb(){
                 const parser = new XMLParser();
                 let jObj = parser.parse(data);
                 const players = jObj.fantasy_content.league.players.player
-                players.forEach((player) => {
+                players.forEach((player) => {                    
                     const playerPositions = player.eligible_positions.position;
                     knex('players')
                     .insert({
                         name: player.name.full,
                         position: setPlayerPositions(playerPositions),
-                        team: player.editorial_team_full_name
+                        team: player.editorial_team_full_name,
+                        yahoo_url: player.url
                     })
                     .then(res => {
                         console.log(res)
@@ -164,7 +165,8 @@ function loadTeamsPlayersToDb(){
                       name: player.name.full,
                       position: setPlayerPositions(playerPositions),
                       team: teamName,
-                      player_team: player.editorial_team_full_name
+                      player_team: player.editorial_team_full_name,
+                      yahoo_url: player.url
                     })
                     .then(res => {
                         console.log(res)
@@ -178,7 +180,7 @@ function loadTeamsPlayersToDb(){
         }
     })
 }
-// loadTeamsPlayersToDb();
+loadTeamsPlayersToDb();
 
 // makeAPIrequest("https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games;game_keys=mlb/teams")
 
