@@ -31,7 +31,30 @@ router.put('/draft/pick', (req, res) => {
           player_team: req.body.player_team
         }
     ).then(data => {
-        res.status(200).json({ success: true, data: data, user: req.user.username });
+        let pick;
+        let round;
+        if(req.body.pick == 14){
+            pick = 1;
+            round = req.body.round + 1
+        } else {
+            pick = req.body.pick + 1
+            round = req.body.round
+        }
+
+        res.status(200).json({ success: true, data: data, user: req.user.username, currentDraftPick: {pick: pick, round: round, timer: 0} });
+    })
+    .catch(err => {
+        console.error('Error ', err);
+    });
+})
+
+router.put('/draft/timer', (req, res) => {
+    knex('draft').where({ round: req.body.round, pick: req.body.pick }).update(
+        {
+          timer: req.body.timer,
+        }
+    ).then(data => {
+        res.status(200).json({ success: true, user: req.user.username });
     })
     .catch(err => {
         console.error('Error ', err);
@@ -43,7 +66,8 @@ router.get('/draft/reset', (req,res) => {
         {
           name: null,
           position: null,
-          player_team: null
+          player_team: null,
+          timer: 0
         }
     ).then(data => {
         res.status(200).json({ success: true, data: data, user: req.user.username });

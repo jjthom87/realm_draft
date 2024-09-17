@@ -1,3 +1,11 @@
+const allAvailablePlayersToDraftArray = [];
+const draftTimerIntervals = [];
+
+let playerSearchValue = "";
+let availablePlayerSearchValue = "";
+const teamsPlayersHtml = []
+let keydownOnce = false;
+
 async function getDraft(){
     return fetch("/api/draft")
         .then(function(response){ 
@@ -125,26 +133,93 @@ async function availablePlayersToDraft(){
                 let mappedPlayers = players.map((player)=> { 
                     return {details: player.name + ", " + teamsMap[player.team] + " - " + player.position, url: player.yahoo_url}
                 })
-                mappedPlayers.forEach((player, index) => {
-                    if(draftPicks.data.includes(player.details.split(",")[0])){
-                        mappedPlayers.splice(index,1)
+                for(let i = 0; i < mappedPlayers.length; i++){
+                    if(draftPicks.data.includes(mappedPlayers[i].details.split(",")[0])){
+                        mappedPlayers.splice(i,1)
                     }
                     let mappedKeepers = keepers.data.map((keeper) => keeper.name);
-                    if(mappedKeepers.includes(player.details.split(",")[0])){
-                        mappedPlayers.splice(index,1)
+                    if(mappedKeepers.includes(mappedPlayers[i].details.split(",")[0])){
+                        mappedPlayers.splice(i,1)
                     }
-                });
+                }
                 return mappedPlayers;
             });
         });
     });
 }
 
-const allAvailablePlayersToDraftArray = [];
+function setDraftTimer(currentDraftPick){    
+    if(currentDraftPick.timer == 0){
+        const date = new Date();
+        const dayOfWeek = date.getDay();
+        const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const dayName = weekdays[dayOfWeek];
+        
+        let seconds;
+        if(dayName == "Sunday" || dayName == "Saturday"){
+            seconds = 10800
+        } else {
+            seconds = 21600
+        }
 
-async function loadHtml(res, draftDisplay){
+        fetch("/api/draft/timer", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({round: currentDraftPick.round, pick: currentDraftPick.pick, timer: seconds})
+        })
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){ 
+            loadHtml(res, "block")
+        });
+        return seconds;
+
+    } else {
+        return currentDraftPick.timer;
+    }
+
+}
+
+function startDraftTimer(draftTimer){
+    setTimeout(async () => {
+        let draft = await getDraft();
+        let currentDraftPick = draft.find((dp) => dp.name == null);
+        const draftInterval = setInterval(() => {
+            if(!draftTimer){
+                draftTimer = parseInt(document.getElementById("draft-timer").innerText.split("Timer: ")[1])
+            }
+            if(draftTimer > 0){
+                draftTimer--
+                fetch("/api/draft/timer", {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({round: currentDraftPick.round, pick: currentDraftPick.pick, timer: draftTimer})
+                })
+                .then(function(response){ 
+                    return response.json(); 
+                })
+                .then(function(res){
+                    setTimeout(() => {
+                        document.getElementById("draft-timer").innerText = "Timer: " + draftTimer
+                    }, 500);
+                });
+            } else {
+    
+            }
+        },1000)
+        draftTimerIntervals.push(draftInterval)
+    }, 500)
+}
+
+async function loadHtml(res, draftDisplay, draftTimer = null){
     if(res.success){
         let user = res.user
+
         document.getElementById("page-container").innerHTML = "";
         let html = "";
 
@@ -163,7 +238,15 @@ async function loadHtml(res, draftDisplay){
             draftHtml += lastPickHtml;
         }
 
-        let currentDraftPick = draft.find((dp) => dp.name == null)
+        let currentDraftPick = draft.find((dp) => dp.name == null);
+
+        if(!draftTimer){
+            draftTimer = setDraftTimer(currentDraftPick);
+        }
+
+        let draftTimerHtml = `<p id='draft-timer'>Timer: ${draftTimer}</p>`
+        draftHtml += draftTimerHtml;
+
         let currentPickHtml = `<a href=#current-pick>Current Pick - Team: ${currentDraftPick.team}, Round: ${currentDraftPick.round}, Pick: ${currentDraftPick.pick}</a>`
 
         draftHtml += currentPickHtml;
@@ -323,10 +406,10 @@ function autocomplete(inp, arr) {
             b = document.createElement("DIV");
             b.classList.add("player-search-results")
             /*make the matching letters bold:*/
-            b.innerHTML = "<strong>" + arr[i].substr(0, val.length) + "</strong>";
+            b.innerHTML = `<strong>${arr[i].substr(0, val.length)}</strong>`;
             b.innerHTML += arr[i].substr(val.length);
             /*insert a input field that will hold the current array item's value:*/
-            b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
+            b.innerHTML += `<input type='hidden' value="${arr[i]}">`;
             /*execute a function when someone clicks on the item value (DIV element):*/
             b.addEventListener("click", function(e) {
                 /*insert the value for the autocomplete text field:*/
@@ -407,10 +490,6 @@ function autocomplete(inp, arr) {
     })
   }
 
-let playerSearchValue = "";
-let availablePlayerSearchValue = "";
-const teamsPlayersHtml = []
-let keydownOnce = false;
 document.getElementsByTagName("body")[0].addEventListener("keydown", function(e){
     if(e.target.id == "player-pick-input"){
         availablePlayersToDraft().then((availablePlayersToDraft) => {
@@ -608,8 +687,14 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
                 .then(function(response){ 
                     return response.json(); 
                 })
-                .then(function(res){ 
-                    loadHtml(res, "block")
+                .then(function(res){
+                    clearInterval(draftTimerIntervals[0])
+                    draftTimerIntervals.length = 0;
+
+                    let newDraftTimer = setDraftTimer(res.currentDraftPick)
+
+                    startDraftTimer(newDraftTimer)
+                    loadHtml(res, "block", newDraftTimer)
                 });
             } else {
                 alert("Player Not Available and/or Incorrect Input")
@@ -796,3 +881,5 @@ document.getElementsByTagName("body")[0].addEventListener("change", function(e){
         document.getElementById("available-players-ul").innerHTML = filteredPlayers;
     }
 });
+
+startDraftTimer(null)
