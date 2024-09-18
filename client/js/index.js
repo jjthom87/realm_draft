@@ -16,6 +16,16 @@ async function getDraft(){
         })
 }
 
+async function getDraftTimer(){
+    return fetch("/api/draft/timer")
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){
+            return res.data;
+        })
+}
+
 async function getKeepers(team){
     let api = team != null ? `/api/keepers/${team}` : '/api/keepers'
     return fetch(api)
@@ -148,75 +158,18 @@ async function availablePlayersToDraft(){
     });
 }
 
-function setDraftTimer(currentDraftPick){    
-    if(currentDraftPick.timer == 0){
-        const date = new Date();
-        const dayOfWeek = date.getDay();
-        const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-        const dayName = weekdays[dayOfWeek];
-        
-        let seconds;
-        if(dayName == "Sunday" || dayName == "Saturday"){
-            seconds = 10800
-        } else {
-            seconds = 21600
-        }
-
-        fetch("/api/draft/timer", {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({round: currentDraftPick.round, pick: currentDraftPick.pick, timer: seconds})
-        })
-        .then(function(response){ 
-            return response.json(); 
-        })
-        .then(function(res){ 
-            loadHtml(res, "block")
-        });
-        return seconds;
-
-    } else {
-        return currentDraftPick.timer;
-    }
-
-}
-
-function startDraftTimer(draftTimer){
+function startDraftTimer(draftTimer = null){
     setTimeout(async () => {
-        let draft = await getDraft();
-        let currentDraftPick = draft.find((dp) => dp.name == null);
-        const draftInterval = setInterval(() => {
-            if(!draftTimer){
-                draftTimer = parseInt(document.getElementById("draft-timer").innerText.split("Timer: ")[1])
-            }
-            if(draftTimer > 0){
-                draftTimer--
-                fetch("/api/draft/timer", {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({round: currentDraftPick.round, pick: currentDraftPick.pick, timer: draftTimer})
-                })
-                .then(function(response){ 
-                    return response.json(); 
-                })
-                .then(function(res){
-                    setTimeout(() => {
-                        document.getElementById("draft-timer").innerText = "Timer: " + draftTimer
-                    }, 500);
-                });
-            } else {
-    
-            }
+        const draftInterval = setInterval(async () => {
+            let draft = await getDraftTimer();
+            document.getElementById("draft-timer").innerText = "Timer: " + draft.timer
         },1000)
         draftTimerIntervals.push(draftInterval)
     }, 500)
 }
+startDraftTimer()
 
-async function loadHtml(res, draftDisplay, draftTimer = null){
+async function loadHtml(res, draftDisplay){
     if(res.success){
         let user = res.user
 
@@ -240,11 +193,8 @@ async function loadHtml(res, draftDisplay, draftTimer = null){
 
         let currentDraftPick = draft.find((dp) => dp.name == null);
 
-        if(!draftTimer){
-            draftTimer = setDraftTimer(currentDraftPick);
-        }
-
-        let draftTimerHtml = `<p id='draft-timer'>Timer: ${draftTimer}</p>`
+        let draftTimer = await getDraftTimer();
+        let draftTimerHtml = `<p id='draft-timer'>Timer: ${draftTimer.timer}</p>`
         draftHtml += draftTimerHtml;
 
         let currentPickHtml = `<a href=#current-pick>Current Pick - Team: ${currentDraftPick.team}, Round: ${currentDraftPick.round}, Pick: ${currentDraftPick.pick}</a>`
@@ -691,10 +641,8 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
                     clearInterval(draftTimerIntervals[0])
                     draftTimerIntervals.length = 0;
 
-                    let newDraftTimer = setDraftTimer(res.currentDraftPick)
-
-                    startDraftTimer(newDraftTimer)
-                    loadHtml(res, "block", newDraftTimer)
+                    startDraftTimer()
+                    loadHtml(res, "block")
                 });
             } else {
                 alert("Player Not Available and/or Incorrect Input")
@@ -882,4 +830,4 @@ document.getElementsByTagName("body")[0].addEventListener("change", function(e){
     }
 });
 
-startDraftTimer(null)
+// startDraftTimer(null)
