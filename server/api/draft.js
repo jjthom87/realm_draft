@@ -49,5 +49,56 @@ function createDraftInDb(){
     
     });
 };
+//createDraftInDb()
 
-createDraftInDb()
+function setDraftTimer(currentDraftPickTimer){    
+    if(currentDraftPickTimer == 0){
+        const date = new Date();
+        const dayOfWeek = date.getDay();
+        const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const dayName = weekdays[dayOfWeek];
+        
+        let seconds;
+        if(dayName == "Sunday" || dayName == "Saturday"){
+            seconds = 10800
+        } else {
+            seconds = 21600
+        }
+
+        return seconds;
+
+    } else {
+        return currentDraftPickTimer;
+    }
+}
+
+async function getCurrentPick(){
+    return knex('draft')
+            .select("*")
+            .then(data => { 
+                const currentPick = data.find((dp) => dp.name == null)
+                return currentPick;
+            })
+            .catch(err => {
+                return err;
+            });
+}
+
+function runDraftTimer(){
+    setInterval(async () => {
+        const currentDraftPick = await getCurrentPick();
+        let draftTimer = setDraftTimer(currentDraftPick.timer);
+        draftTimer--;
+        knex('draft').where({ round: currentDraftPick.round, pick: currentDraftPick.pick }).update(
+            {
+              timer: draftTimer,
+            }
+        ).then(data => {
+        })
+        .catch(err => {
+            console.error('Error ', err);
+        });
+    },1000);
+}
+
+module.exports = { getCurrentPick, runDraftTimer };
