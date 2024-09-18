@@ -6,6 +6,16 @@ let availablePlayerSearchValue = "";
 const teamsPlayersHtml = []
 let keydownOnce = false;
 
+async function getLoggedInUser(){
+    return fetch("/auth/signed-in")
+    .then(function(response){ 
+        return response.json(); 
+    })
+    .then(function(res){ 
+        return res;
+    });
+}
+
 async function getDraft(){
     return fetch("/api/draft")
         .then(function(response){ 
@@ -22,7 +32,7 @@ async function getDraftTimer(){
             return response.json(); 
         })
         .then(function(res){
-            return res.data;
+            return res;
         })
 }
 
@@ -158,11 +168,18 @@ async function availablePlayersToDraft(){
     });
 }
 
-function startDraftTimer(draftTimer = null){
+function startDraftTimer(){
     setTimeout(async () => {
         const draftInterval = setInterval(async () => {
-            let draft = await getDraftTimer();
-            document.getElementById("draft-timer").innerText = "Timer: " + draft.timer
+            let loggedInUser = await getLoggedInUser();
+            if(loggedInUser.user != null){
+                let draft = await getDraftTimer();
+                if(draft.data.timer > 0){
+                    document.getElementById("draft-timer").innerText = "Timer: " + draft.data.timer
+                } else {
+                    loadHtml(draft, "block")
+                }
+            }
         },1000)
         draftTimerIntervals.push(draftInterval)
     }, 500)
@@ -191,7 +208,7 @@ async function loadHtml(res, draftDisplay){
             draftHtml += lastPickHtml;
         }
 
-        let currentDraftPick = draft.find((dp) => dp.name == null);
+        let currentDraftPick = draft.find((dp) => dp.name == null && dp.timer != 666666);
 
         let draftTimer = await getDraftTimer();
         let draftTimerHtml = `<p id='draft-timer'>Timer: ${draftTimer.timer}</p>`
@@ -205,7 +222,7 @@ async function loadHtml(res, draftDisplay){
         draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col">Position</th></tr></thead>';
 
         let draftTable = ""
-        let current = draft.find((dp) => dp.name == null)
+        let current = draft.find((dp) => dp.name == null && dp.timer != 666666);
         draft.forEach((dp) => {
             let userHtml = dp.team == user ? 'style="color: red"' : ''
 
@@ -216,6 +233,8 @@ async function loadHtml(res, draftDisplay){
                     // } else {
                     //     draftTable += `<tr style='background-color: #add898;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td style="color: #27477f">CURRENT PICK</td><td>PENDING</td></tr>`   
                     // }
+                } else if (dp.timer == 666666){
+                    draftTable += `<tr style='background-color: #FF7F7F; font-weight: bold;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} class='missed-player-pick-input'/><button class='submit-missed-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
                 } else {
                     draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>PENDING</td><td>PENDING</td><td>PENDING</td></tr>`
                 }
@@ -446,6 +465,11 @@ document.getElementsByTagName("body")[0].addEventListener("keydown", function(e)
             const availablePlayersToDraftDetails = availablePlayersToDraft.map((ap) => ap.details)
             autocomplete(document.getElementById("player-pick-input"), availablePlayersToDraftDetails)
         })
+    } else if (e.target.classList.contains("missed-player-pick-input")){
+        availablePlayersToDraft().then((availablePlayersToDraft) => {
+            const availablePlayersToDraftDetails = availablePlayersToDraft.map((ap) => ap.details)
+            autocomplete(e.target, availablePlayersToDraftDetails)
+        }) 
     } else if (e.target.id == "search-team-player"){
         let teamsPlayersSections = document.getElementsByClassName('teams-players-well');
         if(!keydownOnce){
@@ -614,6 +638,42 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
         })  
     } else if (e.target.id == "submit-player-pick"){
         let playerPickInput = document.getElementById("player-pick-input");
+        let playerPick = playerPickInput.value;
+
+        availablePlayersToDraft().then((availablePlayersToDraft) => {
+            const availablePlayersToDraftDetails = availablePlayersToDraft.map((ap) => ap.details)
+            if(availablePlayersToDraftDetails.includes(playerPick)){
+                const draftPickObject = {
+                    round: playerPickInput.getAttribute("round"),
+                    pick: playerPickInput.getAttribute("pick"),
+                    name: playerPick.split(",")[0],
+                    player_team: teamsMap[playerPick.split(", ")[1].split(" - ")[0]],
+                    position: playerPick.split(", ")[1].split(" - ")[1]
+                }
+        
+                fetch("/api/draft/pick", {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(draftPickObject)
+                })
+                .then(function(response){ 
+                    return response.json(); 
+                })
+                .then(function(res){
+                    clearInterval(draftTimerIntervals[0])
+                    draftTimerIntervals.length = 0;
+
+                    startDraftTimer()
+                    loadHtml(res, "block")
+                });
+            } else {
+                alert("Player Not Available and/or Incorrect Input")
+            }
+        })
+    } else if (e.target.classList.contains("submit-missed-player-pick")){
+        let playerPickInput = e.target.parentElement.children[0];
         let playerPick = playerPickInput.value;
 
         availablePlayersToDraft().then((availablePlayersToDraft) => {
@@ -829,5 +889,3 @@ document.getElementsByTagName("body")[0].addEventListener("change", function(e){
         document.getElementById("available-players-ul").innerHTML = filteredPlayers;
     }
 });
-
-// startDraftTimer(null)

@@ -53,7 +53,11 @@ router.put('/draft/pick', (req, res) => {
 
 router.get('/draft/timer', async (req, res) => {
     const currentDraftPick = await getCurrentPick();
-    res.status(200).json({ success: true, data: currentDraftPick});
+    if(req.user){
+        res.status(200).json({ success: true, data: currentDraftPick, user: req.user.username});
+    } else {
+        res.status(200).json({ success: true, data: currentDraftPick});  
+    }
 })
 
 router.put('/draft/timer', (req, res) => {

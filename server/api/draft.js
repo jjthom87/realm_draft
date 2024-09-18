@@ -60,9 +60,11 @@ function setDraftTimer(currentDraftPickTimer){
         
         let seconds;
         if(dayName == "Sunday" || dayName == "Saturday"){
-            seconds = 10800
+            // seconds = 10800
+            seconds = 30
         } else {
-            seconds = 21600
+            // seconds = 21600
+            seconds = 60
         }
 
         return seconds;
@@ -76,7 +78,7 @@ async function getCurrentPick(){
     return knex('draft')
             .select("*")
             .then(data => { 
-                const currentPick = data.find((dp) => dp.name == null)
+                const currentPick = data.find((dp) => dp.name == null && dp.timer != 666666)
                 return currentPick;
             })
             .catch(err => {
@@ -89,15 +91,27 @@ function runDraftTimer(){
         const currentDraftPick = await getCurrentPick();
         let draftTimer = setDraftTimer(currentDraftPick.timer);
         draftTimer--;
-        knex('draft').where({ round: currentDraftPick.round, pick: currentDraftPick.pick }).update(
-            {
-              timer: draftTimer,
-            }
-        ).then(data => {
-        })
-        .catch(err => {
-            console.error('Error ', err);
-        });
+        if(draftTimer > 0){
+            knex('draft').where({ round: currentDraftPick.round, pick: currentDraftPick.pick }).update(
+                {
+                  timer: draftTimer,
+                }
+            ).then(data => {
+            })
+            .catch(err => {
+                console.error('Error ', err);
+            });
+        } else {
+            knex('draft').where({ round: currentDraftPick.round, pick: currentDraftPick.pick }).update(
+                {
+                  timer: 666666,
+                }
+            ).then(data => {
+            })
+            .catch(err => {
+                console.error('Error ', err);
+            });
+        }
     },1000);
 }
 
