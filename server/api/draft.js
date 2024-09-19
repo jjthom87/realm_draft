@@ -60,11 +60,9 @@ function setDraftTimer(currentDraftPickTimer){
         
         let seconds;
         if(dayName == "Sunday" || dayName == "Saturday"){
-            // seconds = 10800
-            seconds = 30
+            seconds = 10800
         } else {
-            // seconds = 21600
-            seconds = 60
+            seconds = 21600
         }
 
         return seconds;

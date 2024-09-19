@@ -76,10 +76,10 @@ router.put('/draft/timer', (req, res) => {
 router.get('/draft/reset', (req,res) => {
     knex('draft').update(
         {
-          name: null,
-          position: null,
-          player_team: null,
-          timer: 0
+            name: null,
+            position: null,
+            player_team: null,
+            timer: 0
         }
     ).then(data => {
         res.status(200).json({ success: true, data: data, user: req.user.username });

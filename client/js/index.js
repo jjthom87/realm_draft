@@ -218,6 +218,7 @@ async function loadHtml(res, draftDisplay){
 
         draftHtml += currentPickHtml;
         draftHtml += "<button style='background-color: red; color: white; float: right;' id='reset-draft-button'>Reset Draft</button>"
+        draftHtml += `<p><div style='float: right;'><input placeholder='Set Seconds' style='width: 100px;' id='set-timer-input'/><button id='set-timer-button'>Set Timer</button></div></p>`
         draftHtml += "<table>";
         draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col">Position</th></tr></thead>';
 
@@ -234,7 +235,11 @@ async function loadHtml(res, draftDisplay){
                     //     draftTable += `<tr style='background-color: #add898;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td style="color: #27477f">CURRENT PICK</td><td>PENDING</td></tr>`   
                     // }
                 } else if (dp.timer == 666666){
-                    draftTable += `<tr style='background-color: #FF7F7F; font-weight: bold;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} class='missed-player-pick-input'/><button class='submit-missed-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
+                    // if(dp.team == user){
+                        draftTable += `<tr style='background-color: #FF7F7F; font-weight: bold;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} class='missed-player-pick-input'/><button class='submit-missed-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
+                    // } else {
+                    //     draftTable += `<tr style='background-color: #FF7F7F;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>MISSED PICK</td><td>PENDING</td></tr>`   
+                    // }
                 } else {
                     draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>PENDING</td><td>PENDING</td><td>PENDING</td></tr>`
                 }
@@ -764,6 +769,33 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
                 loadHtml(res, "block")
             });
         }
+    } else if (e.target.id == "set-timer-button"){
+        const timerInputValue = document.getElementById("set-timer-input").value;
+        fetch("/api/draft")
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){
+            let draft = res.data;
+            const currentPick = draft.find((dp) => dp.name == null && dp.timer != 666666)
+            fetch("/api/draft/timer", {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({timer: timerInputValue, pick: currentPick.pick, round: currentPick.round})
+            })
+            .then(function(response){ 
+                return response.json(); 
+            })
+            .then(function(res){
+                clearInterval(draftTimerIntervals[0])
+                draftTimerIntervals.length = 0;
+    
+                startDraftTimer()
+                loadHtml(res, "block")
+            });
+        })
     }
 })
 
