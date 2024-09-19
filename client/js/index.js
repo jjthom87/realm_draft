@@ -543,8 +543,8 @@ document.getElementsByTagName("body")[0].addEventListener("keydown", function(e)
                 playerName = playerName.replaceAll("í", "i")
             }
 
-            const playerTeam = teamsMap[playerDetails.split(" - ")[0]]
-            const playerPosition = playerDetails.split(" - ")[1];
+            const playerTeam = teamsMap[playerDetails.split(", ")[1].split(" - ")[0]]
+            const playerPosition = playerDetails.split(", ")[1].split(" - ")[1];
 
             if(positionDropdownValue != "" && teamDropdownValue != ""){
                 if(positionDropdownValue == "all positions" && teamDropdownValue == "all teams"){
