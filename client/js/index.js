@@ -168,6 +168,18 @@ async function availablePlayersToDraft(){
     });
 }
 
+var toHHMMSS = (secs) => {
+    var sec_num = parseInt(secs, 10)
+    var hours   = Math.floor(sec_num / 3600)
+    var minutes = Math.floor(sec_num / 60) % 60
+    var seconds = sec_num % 60
+
+    return [hours,minutes,seconds]
+        .map(v => v < 10 ? "0" + v : v)
+        .filter((v,i) => v !== "00" || i > 0)
+        .join(":")
+}
+
 function startDraftTimer(){
     setTimeout(async () => {
         const draftInterval = setInterval(async () => {
@@ -175,7 +187,7 @@ function startDraftTimer(){
             if(loggedInUser.user != null){
                 let draft = await getDraftTimer();
                 if(draft.data.timer > 0){
-                    document.getElementById("draft-timer").innerText = "Timer: " + draft.data.timer
+                    document.getElementById("draft-timer").innerText = "Timer: " + toHHMMSS(draft.data.timer)
                 } else {
                     loadHtml(draft, "block")
                 }
@@ -197,7 +209,10 @@ async function loadHtml(res, draftDisplay){
 
         let buttonsHtml = '<div><button style="margin: 2px;" id="show-draft-button">Draft</button><button style="margin: 2px;" id="show-keepers-button">Keepers</button><button style="margin: 2px;" id="show-all-teams-button">Teams</button><button style="margin: 2px;" id="show-all-available-players-button">Available Players</button></div>'
 
-        let draftHtml = '<div id="draft-section" style="display: '+draftDisplay+';">'
+        let draftHtml = '<div id="draft-section" style="display: '+draftDisplay+';">';
+
+        draftHtml += "<button style='background-color: red; color: white; float: right;' id='reset-draft-button'>Reset Draft</button><br>"
+        draftHtml += `<p><div style='float: right;'><input placeholder='Set Seconds' style='width: 100px;' id='set-timer-input'/><button id='set-timer-button'>Set Timer</button></div></p><br><br>`
 
         let draft = await getDraft()
         let lastPick = draft.filter((dp) => dp.name != null).pop();
@@ -211,14 +226,12 @@ async function loadHtml(res, draftDisplay){
         let currentDraftPick = draft.find((dp) => dp.name == null && dp.timer != 666666);
 
         let draftTimer = await getDraftTimer();
-        let draftTimerHtml = `<p id='draft-timer'>Timer: ${draftTimer.timer}</p>`
+        let draftTimerHtml = `<p id='draft-timer'>Timer: ${toHHMMSS(draftTimer.timer)}</p>`
         draftHtml += draftTimerHtml;
 
         let currentPickHtml = `<a href=#current-pick>Current Pick - Team: ${currentDraftPick.team}, Round: ${currentDraftPick.round}, Pick: ${currentDraftPick.pick}</a>`
 
         draftHtml += currentPickHtml;
-        draftHtml += "<button style='background-color: red; color: white; float: right;' id='reset-draft-button'>Reset Draft</button>"
-        draftHtml += `<p><div style='float: right;'><input placeholder='Set Seconds' style='width: 100px;' id='set-timer-input'/><button id='set-timer-button'>Set Timer</button></div></p>`
         draftHtml += "<table>";
         draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col">Position</th></tr></thead>';
 

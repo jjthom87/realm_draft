@@ -1,4 +1,7 @@
 const knex = require('knex')(require('../knexfile.js'));
+const {
+    setInterval
+  } = require('node:timers/promises');
 
 function sortDraftArray(draftArray){
     let finalDraftArray = [];
@@ -84,33 +87,35 @@ async function getCurrentPick(){
             });
 }
 
-function runDraftTimer(){
-    setInterval(async () => {
-        const currentDraftPick = await getCurrentPick();
-        let draftTimer = setDraftTimer(currentDraftPick.timer);
-        draftTimer--;
-        if(draftTimer > 0){
-            knex('draft').where({ round: currentDraftPick.round, pick: currentDraftPick.pick }).update(
-                {
-                  timer: draftTimer,
-                }
-            ).then(data => {
-            })
-            .catch(err => {
-                console.error('Error ', err);
-            });
-        } else {
-            knex('draft').where({ round: currentDraftPick.round, pick: currentDraftPick.pick }).update(
-                {
-                  timer: 666666,
-                }
-            ).then(data => {
-            })
-            .catch(err => {
-                console.error('Error ', err);
-            });
+async function runDraftTimer() {
+    const interval = 1000;
+  
+    for await (const startTime of setInterval(interval)) {
+      const currentDraftPick = await getCurrentPick();
+      let draftTimer = setDraftTimer(currentDraftPick.timer);
+      draftTimer--;
+      if(draftTimer > 0){
+          knex('draft').where({ round: currentDraftPick.round, pick: currentDraftPick.pick }).update(
+              {
+                timer: draftTimer,
+              }
+          ).then(data => {
+          })
+          .catch(err => {
+              console.error('Error ', err);
+          });
+      } else {
+          knex('draft').where({ round: currentDraftPick.round, pick: currentDraftPick.pick }).update(
+              {
+                timer: 666666,
+              }
+          ).then(data => {
+          })
+          .catch(err => {
+              console.error('Error ', err);
+          });
         }
-    },1000);
+    }
 }
 
 module.exports = { getCurrentPick, runDraftTimer };
