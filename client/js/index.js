@@ -6,58 +6,6 @@ let availablePlayerSearchValue = "";
 const teamsPlayersHtml = []
 let keydownOnce = false;
 
-async function getLoggedInUser(){
-    return fetch("/auth/signed-in")
-    .then(function(response){ 
-        return response.json(); 
-    })
-    .then(function(res){ 
-        return res;
-    });
-}
-
-async function getDraft(){
-    return fetch("/api/draft")
-        .then(function(response){ 
-            return response.json(); 
-        })
-        .then(function(res){
-            return res.data;
-        })
-}
-
-async function getDraftTimer(){
-    return fetch("/api/draft/timer")
-        .then(function(response){ 
-            return response.json(); 
-        })
-        .then(function(res){
-            return res;
-        })
-}
-
-async function getKeepers(team){
-    let api = team != null ? `/api/keepers/${team}` : '/api/keepers'
-    return fetch(api)
-        .then(function(response){ 
-            return response.json(); 
-        })
-        .then(function(res){
-            return res.data;
-        })
-}
-
-async function getAllTeams(team){
-    let api = team != null ? `/api/teams/${team}` : '/api/teams'
-    return fetch(api)
-        .then(function(response){ 
-            return response.json(); 
-        })
-        .then(function(res){
-            return res.data;
-        })
-}
-
 let positionsMap = {
     "1B": "First Baseman",
     "2B": "Second Baseman",
@@ -133,6 +81,58 @@ let teamsMap = {
     "WSH": "Washington Nationals"
 }
 
+async function getLoggedInUser(){
+    return fetch("/auth/signed-in")
+    .then(function(response){ 
+        return response.json(); 
+    })
+    .then(function(res){ 
+        return res;
+    });
+}
+
+async function getDraft(){
+    return fetch("/api/draft")
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){
+            return res.data;
+        })
+}
+
+async function getDraftTimer(){
+    return fetch("/api/draft/timer")
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){
+            return res;
+        })
+}
+
+async function getKeepers(team){
+    let api = team != null ? `/api/keepers/${team}` : '/api/keepers'
+    return fetch(api)
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){
+            return res.data;
+        })
+}
+
+async function getAllTeams(team){
+    let api = team != null ? `/api/teams/${team}` : '/api/teams'
+    return fetch(api)
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){
+            return res.data;
+        })
+}
+
 async function availablePlayersToDraft(){
     return await fetch("/api/players")
     .then(function(response){ 
@@ -185,11 +185,23 @@ function startDraftTimer(){
         const draftInterval = setInterval(async () => {
             let loggedInUser = await getLoggedInUser();
             if(loggedInUser.user != null){
-                let draft = await getDraftTimer();
-                if(draft.data.timer > 0){
-                    document.getElementById("draft-timer").innerText = "Timer: " + toHHMMSS(draft.data.timer)
+                let currentDraftPick = await getDraftTimer();
+                if(new Date(currentDraftPick.data.draftPickDeadline) > new Date()){
+                    document.getElementById("draft-timer").innerText = "Draft Pick Deadline: " + currentDraftPick.data.draftPickDeadline
                 } else {
-                    loadHtml(draft, "block")
+                    fetch("/api/draft/pick", {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({round: currentDraftPick.data.round, pick: currentDraftPick.data.pick, draftPickDeadline: '6666-12-31 00:00:00'})
+                    })
+                    .then(function(response){ 
+                        return response.json(); 
+                    })
+                    .then(function(res){
+                        loadHtml(res, "block")
+                    });
                 }
             }
         },1000)
@@ -211,8 +223,8 @@ async function loadHtml(res, draftDisplay){
 
         let draftHtml = '<div id="draft-section" style="display: '+draftDisplay+';">';
 
-        draftHtml += "<button style='background-color: red; color: white; float: right;' id='reset-draft-button'>Reset Draft</button><br>"
-        draftHtml += `<p><div style='float: right;'><input placeholder='Set Seconds' style='width: 100px;' id='set-timer-input'/><button id='set-timer-button'>Set Timer</button></div></p><br><br>`
+        draftHtml += "<span style='float: right;'>Confirm Reset <input type='checkbox' id='confirm-reset-checkbox' /></span><button disabled style='background-color: red; color: white; float: right;' id='reset-draft-button'>Reset Draft</button><br>"
+        draftHtml += `<p><div style='float: right;'><input placeholder='seconds, minutes, or hours i.e. 10 seconds' style='width: 275px;' id='set-timer-input'/><button id='set-timer-button'>Set Timer</button></div></p><br><br>`
 
         let draft = await getDraft()
         let lastPick = draft.filter((dp) => dp.name != null).pop();
@@ -223,10 +235,10 @@ async function loadHtml(res, draftDisplay){
             draftHtml += lastPickHtml;
         }
 
-        let currentDraftPick = draft.find((dp) => dp.name == null && dp.timer != 666666);
+        let currentDraftPick = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.includes('6666'));
 
         let draftTimer = await getDraftTimer();
-        let draftTimerHtml = `<p id='draft-timer'>Timer: ${toHHMMSS(draftTimer.timer)}</p>`
+        let draftTimerHtml = `<p id='draft-timer'>Timer: ${draftTimer.draftPickDeadline ? draftTimer.draftPickDeadline.toString() : 'PENDING'}</p>`
         draftHtml += draftTimerHtml;
 
         let currentPickHtml = `<a href=#current-pick>Current Pick - Team: ${currentDraftPick.team}, Round: ${currentDraftPick.round}, Pick: ${currentDraftPick.pick}</a>`
@@ -236,7 +248,7 @@ async function loadHtml(res, draftDisplay){
         draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col">Position</th></tr></thead>';
 
         let draftTable = ""
-        let current = draft.find((dp) => dp.name == null && dp.timer != 666666);
+        let current = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.includes('6666'));
         draft.forEach((dp) => {
             let userHtml = dp.team == user ? 'style="color: red"' : ''
 
@@ -247,7 +259,7 @@ async function loadHtml(res, draftDisplay){
                     // } else {
                     //     draftTable += `<tr style='background-color: #add898;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td style="color: #27477f">CURRENT PICK</td><td>PENDING</td></tr>`   
                     // }
-                } else if (dp.timer == 666666){
+                } else if (dp.draftPickDeadline.includes('6666')){
                     // if(dp.team == user){
                         draftTable += `<tr style='background-color: #FF7F7F; font-weight: bold;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} class='missed-player-pick-input'/><button class='submit-missed-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
                     // } else {
@@ -767,21 +779,18 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
             });
         });
     } else if (e.target.id == "reset-draft-button"){
-        let resetDraftDecision = prompt("Confirming that you want to reset the draft. Type 'y' if you want to.");
-        if(resetDraftDecision == "y"){
-            fetch("/api/draft/reset", {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            })
-            .then(function(response){ 
-                return response.json(); 
-            })
-            .then(function(res){ 
-                loadHtml(res, "block")
-            });
-        }
+        fetch("/api/draft/reset", {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        })
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){ 
+            loadHtml(res, "block")
+        });
     } else if (e.target.id == "set-timer-button"){
         const timerInputValue = document.getElementById("set-timer-input").value;
         fetch("/api/draft")
@@ -790,7 +799,7 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
         })
         .then(function(res){
             let draft = res.data;
-            const currentPick = draft.find((dp) => dp.name == null && dp.timer != 666666)
+            const currentPick = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.includes('6666'))
             fetch("/api/draft/timer", {
                 method: "PUT",
                 headers: {
@@ -932,5 +941,7 @@ document.getElementsByTagName("body")[0].addEventListener("change", function(e){
             }
         })
         document.getElementById("available-players-ul").innerHTML = filteredPlayers;
+    } else if (e.target.id == "confirm-reset-checkbox"){
+        document.getElementById("reset-draft-button").disabled = !document.getElementById("reset-draft-button").disabled
     }
 });

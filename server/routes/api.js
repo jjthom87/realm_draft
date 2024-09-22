@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const knex = require('knex')(require('../knexfile.js'));
-const { runDraftTimer, getCurrentPick } = require('../api/draft.js');
+const { runDraftTimer, getCurrentPick, setDraftPickDeadline } = require('../api/draft.js');
 
 runDraftTimer();
 
@@ -27,24 +27,44 @@ router.get('/draft/players', (req, res) => {
 });
 
 router.put('/draft/pick', (req, res) => {
-    knex('draft').where({ round: req.body.round, pick: req.body.pick }).update(
+    let draftPickObject;
+    if(req.body.draftPickDeadline == '6666-12-31 00:00:00'){
+        draftPickObject = 
         {
-          name: req.body.name,
-          position: req.body.position,
-          player_team: req.body.player_team
+            draftPickDeadline: req.body.draftPickDeadline
         }
-    ).then(data => {
-        let pick;
+    } else {
+        draftPickObject = 
+        {
+            name: req.body.name,
+            position: req.body.position,
+            player_team: req.body.player_team,
+            draftPickMade: new Date()
+        }
+    }
+    knex('draft').where({ round: req.body.round, pick: req.body.pick }).update(draftPickObject)
+    .then(data => {
+        let nextPick;
         let round;
         if(req.body.pick == 14){
-            pick = 1;
-            round = req.body.round + 1
+            nextPick = 1;
+            round = parseInt(req.body.round) + 1
         } else {
-            pick = req.body.pick + 1
+            nextPick = parseInt(req.body.pick) + 1
             round = req.body.round
         }
 
-        res.status(200).json({ success: true, data: data, user: req.user.username, currentDraftPick: {pick: pick, round: round, timer: 0} });
+        const nextPickDeadline = setDraftPickDeadline()
+        knex('draft').where({ round: round, pick: nextPick }).update(
+            {
+                draftPickDeadline: nextPickDeadline
+            }
+        ).then(data => {
+            res.status(200).json({ success: true, data: data, user: req.user.username, currentDraftPick: {pick: nextPick, round: round, draftPickDeadline: nextPickDeadline} });
+        })
+        .catch(err => {
+            console.error('Error ', err);
+        });
     })
     .catch(err => {
         console.error('Error ', err);
@@ -61,9 +81,17 @@ router.get('/draft/timer', async (req, res) => {
 })
 
 router.put('/draft/timer', (req, res) => {
+    let currentDate = new Date();
+    if(req.body.timer.includes("seconds")){
+        currentDate.setSeconds(currentDate.getSeconds() + parseInt(req.body.timer.split(" seconds")[0]))
+    } else if (req.body.timer.includes("minutes")){
+        currentDate.setMinutes(currentDate.getMinutes() + parseInt(req.body.timer.split(" minutes")[0]))
+    } else if (req.body.time.includes("hours")){
+        currentDate.setHours(currentDate.getHours() + parseInt(req.body.timer.split(" hours")[0]))
+    }
     knex('draft').where({ round: req.body.round, pick: req.body.pick }).update(
         {
-          timer: req.body.timer,
+            draftPickDeadline: currentDate
         }
     ).then(data => {
         res.status(200).json({ success: true, user: req.user.username });
@@ -79,7 +107,8 @@ router.get('/draft/reset', (req,res) => {
             name: null,
             position: null,
             player_team: null,
-            timer: 0
+            draftPickDeadline: '9999-12-31 00:00:00',
+            draftPickMade: '9999-12-31 00:00:00' 
         }
     ).then(data => {
         res.status(200).json({ success: true, data: data, user: req.user.username });

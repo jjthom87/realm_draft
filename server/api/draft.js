@@ -50,34 +50,49 @@ function createDraftInDb(){
     
     });
 };
-//createDraftInDb()
+// createDraftInDb()
 
-function setDraftTimer(currentDraftPickTimer){    
-    if(currentDraftPickTimer == 0){
+function setDraftPickDeadline(currentDraftPickDeadline = null){  
+    if(!currentDraftPickDeadline || currentDraftPickDeadline.toString().includes('9999')){
         const date = new Date();
         const dayOfWeek = date.getDay();
         const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         const dayName = weekdays[dayOfWeek];
+        let currentDate = new Date();
         
-        let seconds;
         if(dayName == "Sunday" || dayName == "Saturday"){
-            seconds = 10800
+            currentDate.setHours(currentDate.getHours() + 3);
         } else {
-            seconds = 21600
+            currentDate.setHours(currentDate.getHours() + 6);
         }
-
-        return seconds;
+        return currentDate;
 
     } else {
-        return currentDraftPickTimer;
+        return currentDraftPickDeadline;
     }
 }
+
 
 async function getCurrentPick(){
     return knex('draft')
             .select("*")
             .then(data => { 
-                const currentPick = data.find((dp) => dp.name == null && dp.timer != 666666)
+                const currentPick = data.find((dp) => dp.name == null && !dp.draftPickDeadline.toString().includes('6666'))
+                if(currentPick.draftPickDeadline.toString().includes('9999')){
+                    const draftPickDeadline = currentPick.draftPickDeadline.toString()
+                    knex('draft').where({ round: currentPick.round, pick: currentPick.pick }).update(
+                        {
+                            draftPickDeadline: setDraftPickDeadline(draftPickDeadline)
+                        }
+                    ).then(data => {
+                    })
+                    .catch(err => {
+                        console.error('Error ', err);
+                    });
+                    currentPick.draftPickDeadline = draftPickDeadline.toString();
+                } else {
+                    currentPick.draftPickDeadline = currentPick.draftPickDeadline.toString();
+                }
                 return currentPick;
             })
             .catch(err => {
@@ -86,25 +101,13 @@ async function getCurrentPick(){
 }
 
 async function runDraftTimer() {
-    schedule.scheduleJob('* * * * * *', async function(){
+    schedule.scheduleJob('*/6 * * * *', async function(){
         const currentDraftPick = await getCurrentPick();
-        let draftTimer = setDraftTimer(currentDraftPick.timer);  
-        console.log("this is still running")
-        draftTimer--;
-        if(draftTimer > 0){
+        let draftPickDeadline = setDraftPickDeadline(currentDraftPick.draftPickDeadline);
+        if(draftPickDeadline < new Date()){
             knex('draft').where({ round: currentDraftPick.round, pick: currentDraftPick.pick }).update(
                 {
-                timer: draftTimer,
-                }
-            ).then(data => {
-            })
-            .catch(err => {
-                console.error('Error ', err);
-            });
-        } else {
-            knex('draft').where({ round: currentDraftPick.round, pick: currentDraftPick.pick }).update(
-                {
-                timer: 666666,
+                    draftPickDeadline: '6666-12-31 00:00:00',
                 }
             ).then(data => {
             })
@@ -112,7 +115,7 @@ async function runDraftTimer() {
                 console.error('Error ', err);
             });
         }
-      });
+    });
 }
 
-module.exports = { getCurrentPick, runDraftTimer };
+module.exports = { getCurrentPick, runDraftTimer, setDraftPickDeadline };
