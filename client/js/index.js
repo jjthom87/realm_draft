@@ -168,18 +168,6 @@ async function availablePlayersToDraft(){
     });
 }
 
-var toHHMMSS = (secs) => {
-    var sec_num = parseInt(secs, 10)
-    var hours   = Math.floor(sec_num / 3600)
-    var minutes = Math.floor(sec_num / 60) % 60
-    var seconds = sec_num % 60
-
-    return [hours,minutes,seconds]
-        .map(v => v < 10 ? "0" + v : v)
-        .filter((v,i) => v !== "00" || i > 0)
-        .join(":")
-}
-
 function startDraftTimer(){
     setTimeout(async () => {
         const draftInterval = setInterval(async () => {
@@ -714,7 +702,8 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
                     pick: playerPickInput.getAttribute("pick"),
                     name: playerPick.split(",")[0],
                     player_team: teamsMap[playerPick.split(", ")[1].split(" - ")[0]],
-                    position: playerPick.split(", ")[1].split(" - ")[1]
+                    position: playerPick.split(", ")[1].split(" - ")[1],
+                    draftPickDeadline: "6666-12-31 00:00:00"
                 }
         
                 fetch("/api/draft/pick", {

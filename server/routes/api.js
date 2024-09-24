@@ -1,18 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const knex = require('knex')(require('../knexfile.js'));
-const { runDraftTimer, getCurrentPick, setDraftPickDeadline } = require('../api/draft.js');
+const { runDraftTimer, getCurrentPick, setDraftPickDeadline, getDraft } = require('../api/draft.js');
 
 runDraftTimer();
 
-router.get('/draft', (req, res) => {
-    knex('draft')
-    .then(data => {
-        res.status(200).json({ success: true, data: data });
-    })
-    .catch(err => {
-        console.error('Error ', err);
-    });
+router.get('/draft', async (req, res) => {
+    const draft = await getDraft();
+    res.status(200).json({ success: true, data: draft });
 });
 
 router.get('/draft/players', (req, res) => {
@@ -26,9 +21,9 @@ router.get('/draft/players', (req, res) => {
     });
 });
 
-router.put('/draft/pick', (req, res) => {
+router.put('/draft/pick', async (req, res) => {
     let draftPickObject;
-    if(req.body.draftPickDeadline == '6666-12-31 00:00:00'){
+    if(req.body.draftPickDeadline && req.body.draftPickDeadline.toString().includes('6666') && req.body.name == null){
         draftPickObject = 
         {
             draftPickDeadline: req.body.draftPickDeadline
@@ -42,11 +37,17 @@ router.put('/draft/pick', (req, res) => {
             draftPickMade: new Date()
         }
     }
+
     knex('draft').where({ round: req.body.round, pick: req.body.pick }).update(draftPickObject)
-    .then(data => {
+    .then(async(data) => {
         let nextPick;
         let round;
-        if(req.body.pick == 14){
+        if(req.body.draftPickDeadline && req.body.draftPickDeadline.includes("6666")){
+            const draft = await getDraft();
+            const next = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.toString().includes("6666"));
+            nextPick = next.pick;
+            round = next.round;
+        } else if(req.body.pick == 14){
             nextPick = 1;
             round = parseInt(req.body.round) + 1
         } else {
@@ -88,6 +89,8 @@ router.put('/draft/timer', (req, res) => {
         currentDate.setMinutes(currentDate.getMinutes() + parseInt(req.body.timer.split(" minutes")[0]))
     } else if (req.body.time.includes("hours")){
         currentDate.setHours(currentDate.getHours() + parseInt(req.body.timer.split(" hours")[0]))
+    } else {
+        res.status(422).json({ success: false, user: req.user.username, message: "Need to include type of time measurement" });
     }
     knex('draft').where({ round: req.body.round, pick: req.body.pick }).update(
         {

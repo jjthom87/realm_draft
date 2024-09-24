@@ -61,9 +61,11 @@ function setDraftPickDeadline(currentDraftPickDeadline = null){
         let currentDate = new Date();
         
         if(dayName == "Sunday" || dayName == "Saturday"){
-            currentDate.setHours(currentDate.getHours() + 3);
+            // currentDate.setHours(currentDate.getHours() + 3);
+            currentDate.setMinutes(currentDate.getMinutes() + 20);
         } else {
-            currentDate.setHours(currentDate.getHours() + 6);
+            // currentDate.setHours(currentDate.getHours() + 6);
+            currentDate.setMinutes(currentDate.getMinutes() + 20);
         }
         return currentDate;
 
@@ -79,10 +81,10 @@ async function getCurrentPick(){
             .then(data => { 
                 const currentPick = data.find((dp) => dp.name == null && !dp.draftPickDeadline.toString().includes('6666'))
                 if(currentPick.draftPickDeadline.toString().includes('9999')){
-                    const draftPickDeadline = currentPick.draftPickDeadline.toString()
+                    const draftPickDeadline = setDraftPickDeadline(currentPick.draftPickDeadline.toString())
                     knex('draft').where({ round: currentPick.round, pick: currentPick.pick }).update(
                         {
-                            draftPickDeadline: setDraftPickDeadline(draftPickDeadline)
+                            draftPickDeadline: draftPickDeadline
                         }
                     ).then(data => {
                     })
@@ -101,10 +103,10 @@ async function getCurrentPick(){
 }
 
 async function runDraftTimer() {
-    schedule.scheduleJob('*/6 * * * *', async function(){
+    schedule.scheduleJob('*/1 * * * *', async function(){
         const currentDraftPick = await getCurrentPick();
         let draftPickDeadline = setDraftPickDeadline(currentDraftPick.draftPickDeadline);
-        if(draftPickDeadline < new Date()){
+        if(new Date(draftPickDeadline.toString()) < new Date()){
             knex('draft').where({ round: currentDraftPick.round, pick: currentDraftPick.pick }).update(
                 {
                     draftPickDeadline: '6666-12-31 00:00:00',
@@ -118,4 +120,14 @@ async function runDraftTimer() {
     });
 }
 
-module.exports = { getCurrentPick, runDraftTimer, setDraftPickDeadline };
+const getDraft = async () => {
+    return knex('draft')
+    .then(data => {
+        return data;
+    })
+    .catch(err => {
+        return err;
+    });
+}
+
+module.exports = { getCurrentPick, runDraftTimer, setDraftPickDeadline, getDraft };
