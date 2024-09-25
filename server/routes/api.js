@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const knex = require('knex')(require('../knexfile.js'));
-const { runDraftTimer, getCurrentPick, setDraftPickDeadline, getDraft } = require('../api/draft.js');
-
-runDraftTimer();
+const { getCurrentPick, setDraftPickDeadline, getDraft } = require('../api/draft.js');
 
 router.get('/draft', async (req, res) => {
     const draft = await getDraft();

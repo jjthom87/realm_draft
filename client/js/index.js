@@ -191,6 +191,14 @@ function startDraftTimer(){
                         loadHtml(res, "block")
                     });
                 }
+
+                let currentPickElement = document.getElementById("current-pick");
+                const screenRound = currentPickElement.children[0].textContent;
+                const screenPick = currentPickElement.children[1].textContent;
+
+                if(currentDraftPick.data.round != screenRound || currentDraftPick.data.pick != screenPick){
+                    loadHtml(res, "block");
+                }
             }
         },1000)
         draftTimerIntervals.push(draftInterval)

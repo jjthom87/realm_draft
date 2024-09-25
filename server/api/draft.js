@@ -119,6 +119,7 @@ async function runDraftTimer() {
         }
     });
 }
+runDraftTimer();
 
 const getDraft = async () => {
     return knex('draft')
