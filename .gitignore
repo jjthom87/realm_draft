@@ -2,3 +2,4 @@
 node_modules
 server/knexfile.js
 froofy_files
+.DS_Store

@@ -99,3 +99,55 @@ tfoot td {
     background-color: #76a8eb;
     font-weight: bold;
   }
+
+
+  /* LOADER */
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap");
+
+.loader-h1 {
+  margin-bottom: 50px;
+  font-weight: 600;
+  font-size: 40px;
+}
+
+.loader-container {
+  display: flex;
+  column-gap: 20px;
+}
+
+.loader-container .loader-dot {
+  width: 40px;
+  height: 40px;
+  background-color: black;
+  border-radius: 50%;
+  animation: loading 1s infinite alternate;
+}
+
+.loader-container .loader-dot:nth-child(1) {
+  background-color: #4285f4;
+  animation-delay: -0.25s;
+}
+
+.loader-container .loader-dot:nth-child(2) {
+  background-color: #ea4335;
+  animation-delay: -0.5s;
+}
+
+.loader-container .loader-dot:nth-child(3) {
+  background-color: #fbbc05;
+  animation-delay: -0.75s;
+}
+
+.loader-container .loader-dot:nth-child(4) {
+  background-color: #34a853;
+  animation-delay: -1s;
+}
+
+@keyframes loading {
+  0% {
+    transform: translateY(-15px);
+  }
+  100% {
+    transform: translateY(5px);
+  }
+}

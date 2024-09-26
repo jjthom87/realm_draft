@@ -208,6 +208,8 @@ startDraftTimer()
 
 async function loadHtml(res, draftDisplay){
     if(res.success){
+        document.getElementById("loader-div").style.display = "block";
+        
         let user = res.user
 
         document.getElementById("page-container").innerHTML = "";
@@ -343,6 +345,8 @@ async function loadHtml(res, draftDisplay){
             html += allAvailablePlayersHtml
 
             document.getElementById("page-container").innerHTML = html;
+
+            document.getElementById("loader-div").style.display = "none";
         })
     } else {
         document.getElementById("page-container").innerHTML = "";
