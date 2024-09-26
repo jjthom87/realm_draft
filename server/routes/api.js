@@ -40,30 +40,35 @@ router.put('/draft/pick', async (req, res) => {
     .then(async(data) => {
         let nextPick;
         let round;
+        let nextPickDeadline
         if(req.body.draftPickDeadline && req.body.draftPickDeadline.includes("6666")){
             const draft = await getDraft();
             const next = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.toString().includes("6666"));
             nextPick = next.pick;
             round = next.round;
-        } else if(req.body.pick == 14){
-            nextPick = 1;
-            round = parseInt(req.body.round) + 1
-        } else {
-            nextPick = parseInt(req.body.pick) + 1
-            round = req.body.round
-        }
-
-        const nextPickDeadline = setDraftPickDeadline()
-        knex('draft').where({ round: round, pick: nextPick }).update(
-            {
-                draftPickDeadline: nextPickDeadline
-            }
-        ).then(data => {
+            nextPickDeadline = next.draftPickDeadline
             res.status(200).json({ success: true, data: data, user: req.user.username, currentDraftPick: {pick: nextPick, round: round, draftPickDeadline: nextPickDeadline} });
-        })
-        .catch(err => {
-            console.error('Error ', err);
-        });
+        } else {
+            if(req.body.pick == 14){
+                nextPick = 1;
+                round = parseInt(req.body.round) + 1
+            } else {
+                nextPick = parseInt(req.body.pick) + 1
+                round = req.body.round
+            }
+    
+            nextPickDeadline = setDraftPickDeadline()
+            knex('draft').where({ round: round, pick: nextPick }).update(
+                {
+                    draftPickDeadline: nextPickDeadline
+                }
+            ).then(data => {
+                res.status(200).json({ success: true, data: data, user: req.user.username, currentDraftPick: {pick: nextPick, round: round, draftPickDeadline: nextPickDeadline} });
+            })
+            .catch(err => {
+                console.error('Error ', err);
+            });
+        }
     })
     .catch(err => {
         console.error('Error ', err);

@@ -196,9 +196,23 @@ function startDraftTimer(){
                 const screenRound = currentPickElement.children[0].textContent;
                 const screenPick = currentPickElement.children[1].textContent;
 
-                if(currentDraftPick.data.round != screenRound || currentDraftPick.data.pick != screenPick){
+                const draft = await getDraft();
+                const amountOfDraftedPlayers = draft.filter((dp) => dp.name != null).length;
+                
+                const trs = document.getElementsByTagName("tr")
+                let totalPlayerTrs = 0;
+                for(let i = 0; i < trs.length; i++){
+                    if(trs[i].children[4].textContent != "PENDING" && trs[i].children[4].textContent != "Team"){
+                        totalPlayerTrs++
+                    }
+                }
+
+                if((currentDraftPick.data.round != screenRound || currentDraftPick.data.pick != screenPick) || (totalPlayerTrs != amountOfDraftedPlayers)){
+                    let loggedInUser = await getLoggedInUser();
+                    let res = {success: true, user: loggedInUser.user}
                     loadHtml(res, "block");
                 }
+                
             }
         },1000)
         draftTimerIntervals.push(draftInterval)
