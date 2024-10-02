@@ -843,7 +843,8 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
             return response.json(); 
         })
         .then(function(res){ 
-            loadHtml(res, "block")
+            loadHtml(res, "block");
+            window.location.reload();
         });
     } else if (e.target.id == "set-timer-button"){
         const timerInputValue = document.getElementById("set-timer-input").value;
