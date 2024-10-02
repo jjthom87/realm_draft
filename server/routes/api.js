@@ -36,43 +36,51 @@ router.put('/draft/pick', async (req, res) => {
         }
     }
 
-    knex('draft').where({ round: req.body.round, pick: req.body.pick }).update(draftPickObject)
-    .then(async(data) => {
-        let nextPick;
-        let round;
-        let nextPickDeadline
-        if(req.body.draftPickDeadline && req.body.draftPickDeadline.includes("6666")){
-            const draft = await getDraft();
-            const next = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.toString().includes("6666"));
-            nextPick = next.pick;
-            round = next.round;
-            nextPickDeadline = next.draftPickDeadline
-            res.status(200).json({ success: true, data: data, user: req.user.username, currentDraftPick: {pick: nextPick, round: round, draftPickDeadline: nextPickDeadline} });
-        } else {
-            if(req.body.pick == 14){
-                nextPick = 1;
-                round = parseInt(req.body.round) + 1
-            } else {
-                nextPick = parseInt(req.body.pick) + 1
-                round = req.body.round
-            }
-    
-            nextPickDeadline = setDraftPickDeadline()
-            knex('draft').where({ round: round, pick: nextPick }).update(
-                {
-                    draftPickDeadline: nextPickDeadline
+    if(req.body.round && req.body.pick){
+        knex('draft').where({ round: req.body.round, pick: req.body.pick }).update(draftPickObject)
+        .then(async(data) => {
+            let nextPick;
+            let round;
+            let nextPickDeadline
+            if(req.body.draftPickDeadline && req.body.draftPickDeadline.includes("6666")){
+                const draft = await getDraft();
+                const next = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.toString().includes("6666"));
+                if(next){
+                    nextPick = next.pick;
+                    round = next.round;
+                    nextPickDeadline = next.draftPickDeadline
+                    res.status(200).json({ success: true, data: data, user: req.user.username, currentDraftPick: {pick: nextPick, round: round, draftPickDeadline: nextPickDeadline} });
+                } else {
+                    res.status(200).json({ success: true, data: data, user: req.user.username });
                 }
-            ).then(data => {
-                res.status(200).json({ success: true, data: data, user: req.user.username, currentDraftPick: {pick: nextPick, round: round, draftPickDeadline: nextPickDeadline} });
-            })
-            .catch(err => {
-                console.error('Error ', err);
-            });
-        }
-    })
-    .catch(err => {
-        console.error('Error ', err);
-    });
+            } else {
+                if(req.body.pick == 14){
+                    nextPick = 1;
+                    round = parseInt(req.body.round) + 1
+                } else {
+                    nextPick = parseInt(req.body.pick) + 1
+                    round = req.body.round
+                }
+        
+                nextPickDeadline = setDraftPickDeadline()
+                knex('draft').where({ round: round, pick: nextPick }).update(
+                    {
+                        draftPickDeadline: nextPickDeadline
+                    }
+                ).then(data => {
+                    res.status(200).json({ success: true, data: data, user: req.user.username, currentDraftPick: {pick: nextPick, round: round, draftPickDeadline: nextPickDeadline} });
+                })
+                .catch(err => {
+                    console.error('Error ', err);
+                });
+            }
+        })
+        .catch(err => {
+            console.error('Error ', err);
+        });
+    } else {
+        res.status(200).json({ success: true, user: req.user.username, message: "all draft timers are over" });
+    }
 });
 
 router.get('/draft/timer', async (req, res) => {
@@ -190,7 +198,6 @@ router.put('/keepers/:team', (req, res) => {
     .catch(err => {
         console.error('Error ', err);
     });
-
-})
+});
 
 module.exports = router;

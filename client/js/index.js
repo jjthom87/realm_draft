@@ -193,24 +193,28 @@ function startDraftTimer(){
                 }
 
                 let currentPickElement = document.getElementById("current-pick");
-                const screenRound = currentPickElement.children[0].textContent;
-                const screenPick = currentPickElement.children[1].textContent;
-
-                const draft = await getDraft();
-                const amountOfDraftedPlayers = draft.filter((dp) => dp.name != null).length;
-                
-                const trs = document.getElementsByTagName("tr")
-                let totalPlayerTrs = 0;
-                for(let i = 0; i < trs.length; i++){
-                    if(trs[i].children[4].textContent != "PENDING" && trs[i].children[4].textContent != "Team"){
-                        totalPlayerTrs++
+                if(!currentPickElement){
+                    clearInterval(draftInterval)
+                } else {
+                    const screenRound = currentPickElement.children[0].textContent;
+                    const screenPick = currentPickElement.children[1].textContent;
+    
+                    const draft = await getDraft();
+                    const amountOfDraftedPlayers = draft.filter((dp) => dp.name != null).length;
+                    
+                    const trs = document.getElementsByTagName("tr")
+                    let totalPlayerTrs = 0;
+                    for(let i = 0; i < trs.length; i++){
+                        if(trs[i].children[4].textContent != "PENDING" && trs[i].children[4].textContent != "Team"){
+                            totalPlayerTrs++
+                        }
                     }
-                }
-
-                if((currentDraftPick.data.round != screenRound || currentDraftPick.data.pick != screenPick) || (totalPlayerTrs != amountOfDraftedPlayers)){
-                    let loggedInUser = await getLoggedInUser();
-                    let res = {success: true, user: loggedInUser.user}
-                    loadHtml(res, "block");
+    
+                    if((currentDraftPick.data.round != screenRound || currentDraftPick.data.pick != screenPick) || (totalPlayerTrs != amountOfDraftedPlayers)){
+                        let loggedInUser = await getLoggedInUser();
+                        let res = {success: true, user: loggedInUser.user}
+                        loadHtml(res, "block");
+                    }
                 }
                 
             }
@@ -249,43 +253,78 @@ async function loadHtml(res, draftDisplay){
 
         let currentDraftPick = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.includes('6666'));
 
-        let draftTimer = await getDraftTimer();
-        let draftTimerHtml = `<p id='draft-timer'>Timer: ${draftTimer.draftPickDeadline ? draftTimer.draftPickDeadline.toString() : 'PENDING'}</p>`
-        draftHtml += draftTimerHtml;
-
-        let currentPickHtml = `<a href=#current-pick>Current Pick - Team: ${currentDraftPick.team}, Round: ${currentDraftPick.round}, Pick: ${currentDraftPick.pick}</a>`
-
-        draftHtml += currentPickHtml;
-        draftHtml += "<table>";
-        draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col">Position</th></tr></thead>';
-
-        let draftTable = ""
-        let current = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.includes('6666'));
-        draft.forEach((dp) => {
-            let userHtml = dp.team == user ? 'style="color: red"' : ''
-
-            if(dp.name == null){
-                if(dp.round == current.round && dp.pick == current.pick){
-                    // if(dp.team == user){
-                            draftTable += `<tr style='background-color: #add898; font-weight: bold;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} id='player-pick-input'/><button id='submit-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
-                    // } else {
-                    //     draftTable += `<tr style='background-color: #add898;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td style="color: #27477f">CURRENT PICK</td><td>PENDING</td></tr>`   
-                    // }
-                } else if (dp.draftPickDeadline.includes('6666')){
-                    // if(dp.team == user){
-                        draftTable += `<tr style='background-color: #FF7F7F; font-weight: bold;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} class='missed-player-pick-input'/><button class='submit-missed-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
-                    // } else {
-                    //     draftTable += `<tr style='background-color: #FF7F7F;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>MISSED PICK</td><td>PENDING</td></tr>`   
-                    // }
+        if(currentDraftPick){
+            let draftTimer = await getDraftTimer();
+            let draftTimerHtml = `<p id='draft-timer'>Timer: ${draftTimer.draftPickDeadline ? draftTimer.draftPickDeadline.toString() : 'PENDING'}</p>`
+            draftHtml += draftTimerHtml;
+    
+            let currentPickHtml = `<a href=#current-pick>Current Pick - Team: ${currentDraftPick.team}, Round: ${currentDraftPick.round}, Pick: ${currentDraftPick.pick}</a>`
+    
+            draftHtml += currentPickHtml;
+            draftHtml += "<table>";
+            draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col">Position</th></tr></thead>';
+    
+            let draftTable = ""
+            let current = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.includes('6666'));
+            draft.forEach((dp) => {
+                let userHtml = dp.team == user ? 'style="color: red"' : ''
+    
+                if(dp.name == null){
+                    if(dp.round == current.round && dp.pick == current.pick){
+                        // if(dp.team == user){
+                                draftTable += `<tr style='background-color: #add898; font-weight: bold;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} id='player-pick-input'/><button id='submit-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
+                        // } else {
+                        //     draftTable += `<tr style='background-color: #add898;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td style="color: #27477f">CURRENT PICK</td><td>PENDING</td></tr>`   
+                        // }
+                    } else if (dp.draftPickDeadline.includes('6666')){
+                        // if(dp.team == user){
+                            draftTable += `<tr style='background-color: #FF7F7F; font-weight: bold;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} class='missed-player-pick-input'/><button class='submit-missed-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
+                        // } else {
+                        //     draftTable += `<tr style='background-color: #FF7F7F;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>MISSED PICK</td><td>PENDING</td></tr>`   
+                        // }
+                    } else {
+                        draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>PENDING</td><td>PENDING</td><td>PENDING</td></tr>`
+                    }
                 } else {
-                    draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>PENDING</td><td>PENDING</td><td>PENDING</td></tr>`
+                    draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
                 }
-            } else {
-                draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
-            }
-        });
-        draftHtml += draftTable
-        draftHtml += '</table></div>'
+            });
+            draftHtml += draftTable
+            draftHtml += '</table></div>'
+        } else {
+            // let draftTimer = await getDraftTimer();
+            // let draftTimerHtml = `<p id='draft-timer'>Timer: ${draftTimer.draftPickDeadline ? draftTimer.draftPickDeadline.toString() : 'PENDING'}</p>`
+            // draftHtml += draftTimerHtml;
+    
+            draftHtml += "<table>";
+            draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col">Position</th></tr></thead>';
+    
+            let draftTable = ""
+            let current = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.includes('6666'));
+            draft.forEach((dp) => {
+                let userHtml = dp.team == user ? 'style="color: red"' : ''
+    
+                if (dp.draftPickDeadline.includes('6666')){
+                    if(!dp.name){
+                        // if(dp.team == user){
+                            draftTable += `<tr style='background-color: #FF7F7F; font-weight: bold;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} class='missed-player-pick-input'/><button class='submit-missed-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
+                        // } else {
+                        //     draftTable += `<tr style='background-color: #FF7F7F;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>MISSED PICK</td><td>PENDING</td></tr>`   
+                        // }
+                    } else {
+                        // if(dp.team == user){
+                            draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
+                            // } else {
+                            //     draftTable += `<tr style='background-color: #FF7F7F;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>MISSED PICK</td><td>PENDING</td></tr>`   
+                            // }
+                    }
+                } else {
+                    draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
+                }
+            });
+            draftHtml += draftTable
+            draftHtml += '</table></div>'
+        }
 
         let keepersHtml = "<div id='keepers-section' style='display: none; margin-left: -38px;'><ul style='list-style-type: none;'>"
         let teamKeepers = await getKeepers(user.split("&").join(""))
