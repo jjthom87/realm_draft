@@ -56,16 +56,31 @@ function setDraftPickDeadline(currentDraftPickDeadline = null){
     if(!currentDraftPickDeadline || currentDraftPickDeadline.toString().includes('9999')){
         const date = new Date();
         const dayOfWeek = date.getDay();
+        const hourOfDay = date.getHours();
         const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         const dayName = weekdays[dayOfWeek];
         let currentDate = new Date();
         
+        const nightTimeDraftPeriod = [23,24,1,2,3,4,5,6,7]
+        const weekDayTimeDraftPeriod = [8,9,10,11,12,13,14,15,16]
+        const weekendDayTimeDraftPeriod = [8,9,10,11,12,13,14,15,16,17]
+        
         if(dayName == "Sunday" || dayName == "Saturday"){
-            // currentDate.setHours(currentDate.getHours() + 3);
-            currentDate.setMinutes(currentDate.getMinutes() + 20);
+            if(nightTimeDraftPeriod.includes(hourOfDay)){
+                currentDate.setHours(currentDate.getHours() + 9);
+            } else if (weekendDayTimeDraftPeriod.includes(hourOfDay)){
+                currentDate.setHours(currentDate.getHours() + 3);
+            } else {
+                currentDate.setHours(currentDate.getHours() + 2);
+            }
         } else {
-            // currentDate.setHours(currentDate.getHours() + 6);
-            currentDate.setMinutes(currentDate.getMinutes() + 20);
+            if(nightTimeDraftPeriod.includes(hourOfDay)){
+                currentDate.setHours(currentDate.getHours() + 8);
+            } else if (weekDayTimeDraftPeriod.includes(hourOfDay)){
+                currentDate.setHours(currentDate.getHours() + 5);
+            } else {
+                currentDate.setHours(currentDate.getHours() + 2);
+            }
         }
         return currentDate;
 
@@ -131,4 +146,14 @@ const getDraft = async () => {
     });
 }
 
-module.exports = { getCurrentPick, runDraftTimer, setDraftPickDeadline, getDraft };
+const getUsers = async () => {
+    return knex('users')
+    .then(data => {
+        return data;
+    })
+    .catch(err => {
+        return err;
+    });
+}
+
+module.exports = { getCurrentPick, runDraftTimer, setDraftPickDeadline, getDraft, getUsers };

@@ -1,7 +1,8 @@
 const express = require('express');
+const nodemailer = require("nodemailer");
 const router = express.Router();
 const knex = require('knex')(require('../knexfile.js'));
-const { getCurrentPick, setDraftPickDeadline, getDraft } = require('../api/draft.js');
+const { getCurrentPick, setDraftPickDeadline, getDraft, getUsers } = require('../api/draft.js');
 
 router.get('/draft', async (req, res) => {
     const draft = await getDraft();
@@ -18,6 +19,39 @@ router.get('/draft/players', (req, res) => {
         console.error('Error ', err);
     });
 });
+
+async function sendEmailToNextPick(nextPick){
+    const users = await getUsers();
+    const nextPickUserEmail = users.find((user) => user.username == nextPick.team).email;
+
+    const transporter = nodemailer.createTransport({
+        host: "froofydoog.com",
+        port: 465,
+        secure: true, // true for port 465, false for other ports
+        auth: {
+          user: "draft-admin@froofydoog.com",
+          pass: "",
+        },
+    });
+    
+    console.log(nextPickUserEmail)
+    const messageToClient = await transporter.sendMail({
+        from: '"Draft Admin" <draft-admin@froofydoog.com>', // sender address
+        to: "draft-admin@froofydoog.com",//nextPickUserEmail, // list of receivers
+        subject: "You're the next pick. Round: " + nextPick.round + ", Pick: " + nextPick.pick, // Subject line
+        html: "<div><b>Good Luck!</b></div>", // html body
+    });
+
+    const messageToServer = await transporter.sendMail({
+        from: '"Draft Admin" <draft-admin@froofydoog.com>', // sender address
+        to: "draft-admin@froofydoog.com", // list of receivers
+        subject: "Draft Pick Made", // Subject line
+        text: JSON.stringify(nextPick), // plain text body
+    });
+
+    console.log("Message sent to client: %s", messageToClient.messageId);
+    console.log("Message sent to server: %s", messageToServer.messageId);
+}
 
 router.put('/draft/pick', async (req, res) => {
     let draftPickObject;
@@ -41,11 +75,15 @@ router.put('/draft/pick', async (req, res) => {
         .then(async(data) => {
             let nextPick;
             let round;
-            let nextPickDeadline
+            let nextPickDeadline;
+            const draft = await getDraft();
             if(req.body.draftPickDeadline && req.body.draftPickDeadline.includes("6666")){
-                const draft = await getDraft();
                 const next = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.toString().includes("6666"));
                 if(next){
+                    if(req.body.name == null){
+                        sendEmailToNextPick(next);
+                    }
+
                     nextPick = next.pick;
                     round = next.round;
                     nextPickDeadline = next.draftPickDeadline
@@ -62,6 +100,9 @@ router.put('/draft/pick', async (req, res) => {
                     round = req.body.round
                 }
         
+                const next = draft.find((dp) => dp.pick == nextPick && dp.round == round);
+                sendEmailToNextPick(next)
+
                 nextPickDeadline = setDraftPickDeadline()
                 knex('draft').where({ round: round, pick: nextPick }).update(
                     {
