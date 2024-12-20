@@ -1,5 +1,26 @@
 const knex = require('knex')(require('../knexfile.js'));
+const nodemailer = require("nodemailer");
 const schedule = require('node-schedule');
+
+const getDraft = async () => {
+    return knex('draft')
+    .then(data => {
+        return data;
+    })
+    .catch(err => {
+        return err;
+    });
+}
+
+const getUsers = async () => {
+    return knex('users')
+    .then(data => {
+        return data;
+    })
+    .catch(err => {
+        return err;
+    });
+}
 
 function sortDraftArray(draftArray){
     let finalDraftArray = [];
@@ -89,6 +110,38 @@ function setDraftPickDeadline(currentDraftPickDeadline = null){
     }
 }
 
+async function sendEmailToNextPick(nextPick){
+    const users = await getUsers();
+    const nextPickUserEmail = users.find((user) => user.username == nextPick.team).email;
+
+    const transporter = nodemailer.createTransport({
+        host: "froofydoog.com",
+        port: 465,
+        secure: true, // true for port 465, false for other ports
+        auth: {
+          user: "draft-admin@froofydoog.com",
+          pass: "",
+        },
+    });
+    
+    console.log(nextPickUserEmail)
+    const messageToClient = await transporter.sendMail({
+        from: '"Draft Admin" <draft-admin@froofydoog.com>', // sender address
+        to: "draft-admin@froofydoog.com",//nextPickUserEmail, // list of receivers
+        subject: "You're the next pick. Round: " + nextPick.round + ", Pick: " + nextPick.pick, // Subject line
+        html: "<div><b>Good Luck!</b></div>", // html body
+    });
+
+    const messageToServer = await transporter.sendMail({
+        from: '"Draft Admin" <draft-admin@froofydoog.com>', // sender address
+        to: "draft-admin@froofydoog.com", // list of receivers
+        subject: "Draft Pick Made", // Subject line
+        text: JSON.stringify(nextPick), // plain text body
+    });
+
+    console.log("Message sent to client: %s", messageToClient.messageId);
+    console.log("Message sent to server: %s", messageToServer.messageId);
+}
 
 async function getCurrentPick(){
     return knex('draft')
@@ -122,6 +175,7 @@ async function runDraftTimer() {
         const currentDraftPick = await getCurrentPick();
         let draftPickDeadline = setDraftPickDeadline(currentDraftPick.draftPickDeadline);
         if(new Date(draftPickDeadline.toString()) < new Date()){
+            sendEmailToNextPick(currentDraftPick);
             knex('draft').where({ round: currentDraftPick.round, pick: currentDraftPick.pick }).update(
                 {
                     draftPickDeadline: '6666-12-31 00:00:00',
@@ -136,24 +190,4 @@ async function runDraftTimer() {
 }
 runDraftTimer();
 
-const getDraft = async () => {
-    return knex('draft')
-    .then(data => {
-        return data;
-    })
-    .catch(err => {
-        return err;
-    });
-}
-
-const getUsers = async () => {
-    return knex('users')
-    .then(data => {
-        return data;
-    })
-    .catch(err => {
-        return err;
-    });
-}
-
-module.exports = { getCurrentPick, runDraftTimer, setDraftPickDeadline, getDraft, getUsers };
+module.exports = { getCurrentPick, runDraftTimer, setDraftPickDeadline, getDraft, sendEmailToNextPick };

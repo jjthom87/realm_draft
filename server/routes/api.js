@@ -2,7 +2,7 @@ const express = require('express');
 const nodemailer = require("nodemailer");
 const router = express.Router();
 const knex = require('knex')(require('../knexfile.js'));
-const { getCurrentPick, setDraftPickDeadline, getDraft, getUsers } = require('../api/draft.js');
+const { getCurrentPick, setDraftPickDeadline, getDraft, sendEmailToNextPick } = require('../api/draft.js');
 
 router.get('/draft', async (req, res) => {
     const draft = await getDraft();
@@ -19,39 +19,6 @@ router.get('/draft/players', (req, res) => {
         console.error('Error ', err);
     });
 });
-
-async function sendEmailToNextPick(nextPick){
-    const users = await getUsers();
-    const nextPickUserEmail = users.find((user) => user.username == nextPick.team).email;
-
-    const transporter = nodemailer.createTransport({
-        host: "froofydoog.com",
-        port: 465,
-        secure: true, // true for port 465, false for other ports
-        auth: {
-          user: "draft-admin@froofydoog.com",
-          pass: "",
-        },
-    });
-    
-    console.log(nextPickUserEmail)
-    const messageToClient = await transporter.sendMail({
-        from: '"Draft Admin" <draft-admin@froofydoog.com>', // sender address
-        to: "draft-admin@froofydoog.com",//nextPickUserEmail, // list of receivers
-        subject: "You're the next pick. Round: " + nextPick.round + ", Pick: " + nextPick.pick, // Subject line
-        html: "<div><b>Good Luck!</b></div>", // html body
-    });
-
-    const messageToServer = await transporter.sendMail({
-        from: '"Draft Admin" <draft-admin@froofydoog.com>', // sender address
-        to: "draft-admin@froofydoog.com", // list of receivers
-        subject: "Draft Pick Made", // Subject line
-        text: JSON.stringify(nextPick), // plain text body
-    });
-
-    console.log("Message sent to client: %s", messageToClient.messageId);
-    console.log("Message sent to server: %s", messageToServer.messageId);
-}
 
 router.put('/draft/pick', async (req, res) => {
     let draftPickObject;
