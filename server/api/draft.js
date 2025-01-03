@@ -128,14 +128,14 @@ async function sendEmailToNextPick(nextPick){
     const messageToClient = await transporter.sendMail({
         from: '"Draft Admin" <draft-admin@froofydoog.com>', // sender address
         to: "draft-admin@froofydoog.com",//nextPickUserEmail, // list of receivers
-        subject: "You're the next pick. Round: " + nextPick.round + ", Pick: " + nextPick.pick, // Subject line
-        html: "<div><b>Good Luck!</b></div>", // html body
+        subject: "Local - You're the next pick. Round: " + nextPick.round + ", Pick: " + nextPick.pick, // Subject line
+        html: "<div><a href='http://localhost:5050/#current-pick'>Go to draft</a><b>Good Luck!</b></div>", // html body
     });
 
     const messageToServer = await transporter.sendMail({
         from: '"Draft Admin" <draft-admin@froofydoog.com>', // sender address
         to: "draft-admin@froofydoog.com", // list of receivers
-        subject: "Draft Pick Made", // Subject line
+        subject: "Local - Draft Pick Made", // Subject line
         text: JSON.stringify(nextPick), // plain text body
     });
 

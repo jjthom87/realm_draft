@@ -226,6 +226,9 @@ startDraftTimer()
 
 async function loadHtml(res, draftDisplay){
     if(res.success){
+        let draft = await getDraft();
+        let allKeepers = await getKeepers();
+
         document.getElementById("loader-div").style.display = "block";
         
         let user = res.user
@@ -235,14 +238,13 @@ async function loadHtml(res, draftDisplay){
 
         let welcomeHtml = "<h3>Welcome " + res.user + "</h3>";
 
-        let buttonsHtml = '<div><button style="margin: 2px;" id="show-draft-button">Draft</button><button style="margin: 2px;" id="show-keepers-button">Keepers</button><button style="margin: 2px;" id="show-all-teams-button">Teams</button><button style="margin: 2px;" id="show-all-available-players-button">Available Players</button></div>'
+        let buttonsHtml = '<div><button style="margin: 2px;" id="show-draft-button">Draft</button><button style="margin: 2px;" id="show-keepers-button">Keepers</button><button style="margin: 2px;" id="show-all-teams-button">Teams</button><button style="margin: 2px;" id="show-all-available-players-button">Available Players</button><button style="margin: 2px;" id="show-trades-button">Trades</button><button style="margin: 2px;" id="show-rosters-draft-picks-button">Rosters | Draft Picks</button></div>'
 
         let draftHtml = '<div id="draft-section" style="display: '+draftDisplay+';">';
 
         draftHtml += "<span style='float: right;'>Confirm Reset <input type='checkbox' id='confirm-reset-checkbox' /></span><button disabled style='background-color: red; color: white; float: right;' id='reset-draft-button'>Reset Draft</button><br>"
         draftHtml += `<p><div style='float: right;'><input placeholder='seconds, minutes, or hours i.e. 10 seconds' style='width: 275px;' id='set-timer-input'/><button id='set-timer-button'>Set Timer</button></div></p><br><br>`
 
-        let draft = await getDraft()
         let lastPick = draft.filter((dp) => dp.name != null).pop();
         if(lastPick == undefined){
             lastPick = draft[0]
@@ -278,15 +280,15 @@ async function loadHtml(res, draftDisplay){
                         // }
                     } else if (dp.draftPickDeadline.includes('6666')){
                         // if(dp.team == user){
-                            draftTable += `<tr style='background-color: #FF7F7F; font-weight: bold;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} class='missed-player-pick-input'/><button class='submit-missed-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
+                            draftTable += `<tr style='background-color: #FF7F7F; font-weight: bold;' id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} class='missed-player-pick-input'/><button class='submit-missed-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
                         // } else {
                         //     draftTable += `<tr style='background-color: #FF7F7F;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>MISSED PICK</td><td>PENDING</td></tr>`   
                         // }
                     } else {
-                        draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>PENDING</td><td>PENDING</td><td>PENDING</td></tr>`
+                        draftTable += `<tr id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>PENDING</td><td>PENDING</td><td>PENDING</td></tr>`
                     }
                 } else {
-                    draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
+                    draftTable += `<tr id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
                 }
             });
             draftHtml += draftTable
@@ -307,19 +309,19 @@ async function loadHtml(res, draftDisplay){
                 if (dp.draftPickDeadline.includes('6666')){
                     if(!dp.name){
                         // if(dp.team == user){
-                            draftTable += `<tr style='background-color: #FF7F7F; font-weight: bold;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} class='missed-player-pick-input'/><button class='submit-missed-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
+                            draftTable += `<tr style='background-color: #FF7F7F; font-weight: bold;' id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} class='missed-player-pick-input'/><button class='submit-missed-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
                         // } else {
                         //     draftTable += `<tr style='background-color: #FF7F7F;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>MISSED PICK</td><td>PENDING</td></tr>`   
                         // }
                     } else {
                         // if(dp.team == user){
-                            draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
+                            draftTable += `<tr id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
                             // } else {
                             //     draftTable += `<tr style='background-color: #FF7F7F;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>MISSED PICK</td><td>PENDING</td></tr>`   
                             // }
                     }
                 } else {
-                    draftTable += `<tr><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
+                    draftTable += `<tr id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
                 }
             });
             draftHtml += draftTable
@@ -334,11 +336,10 @@ async function loadHtml(res, draftDisplay){
         keepersHtml += "</ul></div>"
 
         let allTeamsSectionHtml = "<div id='all-teams-section' style='display: none;'><br><input id='search-team-player' placeholder='Search Player or Team Name' style='width: 200px; display: block; margin: 0 auto;'/><h4 style='color: red; text-align: center;'>*keeper</h4><br><div id='all-teams-div' style='display: flex; flex-flow: wrap;'>";
-        let teams = await getAllTeams();
-        let allKeepers = await getKeepers();
-        let teamNames = new Set(teams.map((team) => team.team))
+        let fantasyTeams = await getAllTeams();
+        let teamNames = new Set(fantasyTeams.map((team) => team.team))
         let allTeamsMap = {};
-        teams.forEach((team) => {
+        fantasyTeams.forEach((team) => {
             if(allTeamsMap[team.team] == null){
                 allTeamsMap[team.team] = [];
             }
@@ -356,7 +357,7 @@ async function loadHtml(res, draftDisplay){
             allTeamsSectionHtml += "</ul></div>"
         })
         allTeamsSectionHtml += "</div></div>"
-
+        
         let allAvailablePlayersHtml = "<div id='all-available-players-section' style='display: none;'><br><input id='search-available-player' placeholder='Search Available Player' style='width: 200px;'/><br>"
         let positions = ["C", "1B", "2B", "3B", "SS", "OF", "SP", "RP", "P", "Util"]
         allAvailablePlayersHtml += "<select style='margin: 2px;' id='all-available-players-position-filter'>"
@@ -390,12 +391,60 @@ async function loadHtml(res, draftDisplay){
 
             allAvailablePlayersHtml += "</ul></div>"
 
+            const allFantasyTeamNames = ["Big Wood Bison", "Dynasty Makers", "Help Us Mookie!", "HeRowe Keepers", "Latrell Lamar", "Loss of Foresight", "Pathetic Loser", "Prestige Worldwide", "Radioactive Moose", "RBI'd 4 Her Pleasure", "Springfield Isotopes", "Sprokketts", "Take it Deep", "Ya Gotta Believe"];
+            let allTradesHtml = "<div id='trades-section' style='display: none;'><h1>View or Make Trade</h1><br>"
+            allTradesHtml += "<select id='choose-team-to-trade-with'>"
+            allFantasyTeamNames.forEach((team) => {
+                allTradesHtml += "<option value="+team.split(" ").join("+")+">"+team+"</option>"
+            })
+            allTradesHtml += "</select>"
+            allTradesHtml += "</div>"
+
+            let allRosterDraftPicksHtml = "<div id='rosters-draft-picks-section' style='display: none; flex-flow: wrap;'><br>"
+            let allRostersDraftPicks = {};
+            allFantasyTeamNames.forEach((team) => {
+                allRostersDraftPicks[team] = {draft: [], keepers: []}
+            });
+            draft.forEach((dp) => {
+                allRostersDraftPicks[dp.team].draft.push(dp);
+            })
+            allKeepers.forEach((k) => {
+                allRostersDraftPicks[k.team].keepers.push(k)
+            })
+
+            for(i in allRostersDraftPicks){
+                allRosterDraftPicksHtml += `<div class='well teams-players-well' id="${i.split(" ").join("&")}-well-2" style='width: 300px; margin: 3px;'><h1>${i}</h1><ul id="${i.split(" ").join("&")}-team-list" style='list-style-type: none;'>`
+                allRosterDraftPicksHtml += "<h2>Keepers</h2>";
+                allRosterDraftPicksHtml += "<ul style='list-style-type: none;'>"
+                allRostersDraftPicks[i].keepers.forEach((p) => {
+                    allRosterDraftPicksHtml += "<li>" + p.name + "</li>"
+                })
+                allRosterDraftPicksHtml += "</ul>"
+                allRosterDraftPicksHtml += "<h2>Draft</h2>";
+                allRosterDraftPicksHtml += "<h3>Players Picked</h3>";
+                allRosterDraftPicksHtml += "<ul style='list-style-type: none;'>"
+                allRostersDraftPicks[i].draft.filter((p) => p.name != null).forEach((p) => {
+                    allRosterDraftPicksHtml += "<li>" + p.name + "</li>"
+                })
+                allRosterDraftPicksHtml += "</ul>";
+                allRosterDraftPicksHtml += "<h3>Draft Picks Left</h3>";
+                allRostersDraftPicks[i].draft.filter((p) => p.name == null).forEach((dp) => {
+                    allRosterDraftPicksHtml += "<li>Round: " + dp.round + ", Pick: " + dp.pick + "</li>"
+                })
+                allRosterDraftPicksHtml += "</ul>"
+                allRosterDraftPicksHtml += "</div>";
+            }
+            allRosterDraftPicksHtml += "</div>";
+
+
             html += welcomeHtml
             html += buttonsHtml
             html += draftHtml
             html += keepersHtml
             html += allTeamsSectionHtml
             html += allAvailablePlayersHtml
+            html += allTradesHtml
+            html += allRosterDraftPicksHtml
 
             document.getElementById("page-container").innerHTML = html;
 
@@ -411,15 +460,20 @@ async function loadHtml(res, draftDisplay){
 }
 
 function showCorrectSection(inputSection){
-    const sections = ["keepers", "all-teams", "all-available-players", "draft"];
+    const sections = ["keepers", "all-teams", "all-available-players", "draft", "trades", "rosters-draft-picks"];
     sections.forEach((section)=>{
-        if(section != inputSection){
+        if(section == inputSection){
+            if(section == "rosters-draft-picks"){
+                document.getElementById(section + "-section").style.display = document.getElementById(section+"-section").style.display == "none" ? "flex" : "none"
+            } else {
+                document.getElementById(section + "-section").style.display = document.getElementById(section+"-section").style.display == "none" ? "block" : "none"
+            }
+            document.getElementById("show-"+section+"-button").style.color = document.getElementById(section+"-section").style.display == "none" ? "black" : "red"
+        } else {
             document.getElementById(section+"-section").style.display = "none";
             document.getElementById("show-"+section+"-button").style.color = "black";
         }
     })
-    document.getElementById(inputSection+"-section").style.display = document.getElementById(inputSection+"-section").style.display == "none" ? "block" : "none"
-    document.getElementById("show-"+inputSection+"-button").style.color = document.getElementById(inputSection+"-section").style.display == "none" ? "black" : "red"
 }
 
 setTimeout(() => {
@@ -673,19 +727,6 @@ document.getElementsByTagName("body")[0].addEventListener("keydown", function(e)
     }
 });
 
-function showCorrectSection(inputSection){
-    const sections = ["keepers", "all-teams", "all-available-players", "draft"];
-    sections.forEach((section)=>{
-        if(section == inputSection){
-            document.getElementById(section + "-section").style.display = document.getElementById(section+"-section").style.display == "none" ? "block" : "none"
-            document.getElementById("show-"+section+"-button").style.color = document.getElementById(section+"-section").style.display == "none" ? "black" : "red"
-        } else {
-            document.getElementById(section+"-section").style.display = "none";
-            document.getElementById("show-"+section+"-button").style.color = "black";
-        }
-    })
-}
-
 document.getElementsByTagName("body")[0].addEventListener("click", function(e){
     if(e.target.id == "sign-in-form-submit"){
         document.getElementById("sign-in-form").addEventListener("submit", function(e){
@@ -800,6 +841,10 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
         showCorrectSection("all-teams")
     } else if (e.target.id == "show-all-available-players-button"){
         showCorrectSection("all-available-players")
+    } else if (e.target.id == "show-trades-button"){
+        showCorrectSection("trades")
+    } else if (e.target.id == "show-rosters-draft-picks-button"){
+        showCorrectSection("rosters-draft-picks")
     } else if (e.target.classList.contains("keepers-checkbox")){
         fetch("/auth/signed-in")
         .then(function(response){ 
