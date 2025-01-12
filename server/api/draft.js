@@ -172,19 +172,23 @@ async function getCurrentPick(){
 
 async function runDraftTimer() {
     schedule.scheduleJob('*/1 * * * *', async function(){
-        const currentDraftPick = await getCurrentPick();
-        let draftPickDeadline = setDraftPickDeadline(currentDraftPick.draftPickDeadline);
-        if(new Date(draftPickDeadline.toString()) < new Date()){
-            sendEmailToNextPick(currentDraftPick);
-            knex('draft').where({ round: currentDraftPick.round, pick: currentDraftPick.pick }).update(
-                {
-                    draftPickDeadline: '6666-12-31 00:00:00',
-                }
-            ).then(data => {
-            })
-            .catch(err => {
-                console.error('Error ', err);
-            });
+        const draft = await getDraft();
+        let draftHasStarted = draft.filter(d => !d.draftPickDeadline.toString().includes('9999')).length > 0;
+        if(draftHasStarted){
+            const currentDraftPick = await getCurrentPick();
+            let draftPickDeadline = setDraftPickDeadline(currentDraftPick.draftPickDeadline);
+            if(new Date(draftPickDeadline.toString()) < new Date()){
+                sendEmailToNextPick(currentDraftPick);
+                knex('draft').where({ round: currentDraftPick.round, pick: currentDraftPick.pick }).update(
+                    {
+                        draftPickDeadline: '6666-12-31 00:00:00',
+                    }
+                ).then(data => {
+                })
+                .catch(err => {
+                    console.error('Error ', err);
+                });
+            }
         }
     });
 }

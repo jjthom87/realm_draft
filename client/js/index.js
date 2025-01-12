@@ -222,7 +222,23 @@ function startDraftTimer(){
         draftTimerIntervals.push(draftInterval)
     }, 500)
 }
-startDraftTimer()
+
+async function startDraft(){
+    let draft = await getDraft();
+    let {user} = await getLoggedInUser();
+    let draftHasStarted = draft.filter(d => !d.draftPickDeadline.toString().includes('9999')).length > 0;
+
+    if(user == null){
+        loadHtml({success: false}, "none")
+    } else {
+        if(draftHasStarted){
+            startDraftTimer()
+        } else {
+            loadHtml({success: true, user}, "none")
+        }
+    }
+}
+startDraft();
 
 async function loadHtml(res, draftDisplay){
     if(res.success){
@@ -238,11 +254,12 @@ async function loadHtml(res, draftDisplay){
 
         let welcomeHtml = "<h3>Welcome " + res.user + "</h3>";
 
-        let buttonsHtml = '<div><button style="margin: 2px;" id="show-draft-button">Draft</button><button style="margin: 2px;" id="show-keepers-button">Keepers</button><button style="margin: 2px;" id="show-all-teams-button">Teams</button><button style="margin: 2px;" id="show-all-available-players-button">Available Players</button><button style="margin: 2px;" id="show-trades-button">Trades</button><button style="margin: 2px;" id="show-rosters-draft-picks-button">Rosters | Draft Picks</button></div>'
+        let buttonsHtml = '<div><button style="margin: 2px; color: black;" id="show-draft-button">Draft</button><button style="margin: 2px;" id="show-keepers-button">Keepers</button><button style="margin: 2px;" id="show-all-teams-button">Teams</button><button style="margin: 2px;" id="show-all-available-players-button">Available Players</button><button style="margin: 2px;" id="show-rosters-draft-picks-button">Rosters | Draft Picks</button><button style="margin: 2px;" id="show-trades-button">Trades</button></div>'
 
-        let draftHtml = '<div id="draft-section" style="display: '+draftDisplay+';">';
 
-        draftHtml += "<span style='float: right;'>Confirm Reset <input type='checkbox' id='confirm-reset-checkbox' /></span><button disabled style='background-color: red; color: white; float: right;' id='reset-draft-button'>Reset Draft</button><br>"
+        let draftHtml = `<button id="start-draft-button" style="display: none">Start Draft</button><div id="draft-section" style="display: ${draftDisplay};">`;
+
+        draftHtml += "<span style='float: right;'>Confirm Reset <input type='checkbox' id='confirm-reset-checkbox' /></span><button disabled style='background-color: red; color: white; float: right;' id='reset-draft-button'>Reset Draft</button><button style='background-color: orange; color: white; float: right;' id='pause-draft-button'>Pause Draft</button><br>"
         draftHtml += `<p><div style='float: right;'><input placeholder='seconds, minutes, or hours i.e. 10 seconds' style='width: 275px;' id='set-timer-input'/><button id='set-timer-button'>Set Timer</button></div></p><br><br>`
 
         let lastPick = draft.filter((dp) => dp.name != null).pop();
@@ -254,10 +271,11 @@ async function loadHtml(res, draftDisplay){
         }
 
         let currentDraftPick = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.includes('6666'));
+        let draftHasStarted = draft.filter(d => !d.draftPickDeadline.toString().includes('9999')).length > 0;
 
-        if(currentDraftPick){
+        if(draftHasStarted){
             let draftTimer = await getDraftTimer();
-            let draftTimerHtml = `<p id='draft-timer'>Timer: ${draftTimer.draftPickDeadline ? draftTimer.draftPickDeadline.toString() : 'PENDING'}</p>`
+            let draftTimerHtml = `<p id='draft-timer'>Timer: ${draftTimer.draftPickDeadline != null ? draftTimer.draftPickDeadline.toString() : 'PENDING'}</p>`
             draftHtml += draftTimerHtml;
     
             let currentPickHtml = `<a href=#current-pick>Current Pick - Team: ${currentDraftPick.team}, Round: ${currentDraftPick.round}, Pick: ${currentDraftPick.pick}</a>`
@@ -294,9 +312,8 @@ async function loadHtml(res, draftDisplay){
             draftHtml += draftTable
             draftHtml += '</table></div>'
         } else {
-            // let draftTimer = await getDraftTimer();
-            // let draftTimerHtml = `<p id='draft-timer'>Timer: ${draftTimer.draftPickDeadline ? draftTimer.draftPickDeadline.toString() : 'PENDING'}</p>`
-            // draftHtml += draftTimerHtml;
+            let draftTimerHtml = `<p id='draft-timer' style="display:none;">/p>`
+            draftHtml += draftTimerHtml;
     
             draftHtml += "<table>";
             draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col">Position</th></tr></thead>';
@@ -392,13 +409,6 @@ async function loadHtml(res, draftDisplay){
             allAvailablePlayersHtml += "</ul></div>"
 
             const allFantasyTeamNames = ["Big Wood Bison", "Dynasty Makers", "Help Us Mookie!", "HeRowe Keepers", "Latrell Lamar", "Loss of Foresight", "Pathetic Loser", "Prestige Worldwide", "Radioactive Moose", "RBI'd 4 Her Pleasure", "Springfield Isotopes", "Sprokketts", "Take it Deep", "Ya Gotta Believe"];
-            let allTradesHtml = "<div id='trades-section' style='display: none;'><h1>View or Make Trade</h1><br>"
-            allTradesHtml += "<select id='choose-team-to-trade-with'>"
-            allFantasyTeamNames.forEach((team) => {
-                allTradesHtml += "<option value="+team.split(" ").join("+")+">"+team+"</option>"
-            })
-            allTradesHtml += "</select>"
-            allTradesHtml += "</div>"
 
             let allRosterDraftPicksHtml = "<div id='rosters-draft-picks-section' style='display: none; flex-flow: wrap;'><br>"
             let allRostersDraftPicks = {};
@@ -436,6 +446,15 @@ async function loadHtml(res, draftDisplay){
             }
             allRosterDraftPicksHtml += "</div>";
 
+            let allTradesHtml = "<div id='trades-section' style='display: none;'><h2>Who would you like to trade with?</h2>"
+            allTradesHtml += "<select id='team-to-trade-with'>"
+            allTradesHtml += '<option value="" disabled selected hidden>Select Team</option>'
+            allFantasyTeamNames.forEach((team) => {
+                allTradesHtml += "<option value="+team.split(" ").join("+")+">"+team+"</option>"
+            })
+            allTradesHtml += "</select>"
+            allTradesHtml += "<div id='make-trade-div'></div>"
+            allTradesHtml += "</div>"
 
             html += welcomeHtml
             html += buttonsHtml
@@ -443,8 +462,8 @@ async function loadHtml(res, draftDisplay){
             html += keepersHtml
             html += allTeamsSectionHtml
             html += allAvailablePlayersHtml
-            html += allTradesHtml
             html += allRosterDraftPicksHtml
+            html += allTradesHtml
 
             document.getElementById("page-container").innerHTML = html;
 
@@ -459,12 +478,14 @@ async function loadHtml(res, draftDisplay){
     }
 }
 
-function showCorrectSection(inputSection){
-    const sections = ["keepers", "all-teams", "all-available-players", "draft", "trades", "rosters-draft-picks"];
+async function showCorrectSection(inputSection){
+    let draft = await getDraft()
+    const sections = ["keepers", "all-teams", "all-available-players", "trades", "rosters-draft-picks"];
     sections.forEach((section)=>{
         if(section == inputSection){
             if(section == "rosters-draft-picks"){
                 document.getElementById(section + "-section").style.display = document.getElementById(section+"-section").style.display == "none" ? "flex" : "none"
+                document.getElementById("start-draft-button").style.display = "none"
             } else {
                 document.getElementById(section + "-section").style.display = document.getElementById(section+"-section").style.display == "none" ? "block" : "none"
             }
@@ -474,6 +495,22 @@ function showCorrectSection(inputSection){
             document.getElementById("show-"+section+"-button").style.color = "black";
         }
     })
+
+    if (inputSection == "draft"){
+        let draftHasStarted = draft.filter(d => !d.draftPickDeadline.toString().includes('9999')).length > 0;
+        if(draftHasStarted){
+            document.getElementById("draft-section").style.display = document.getElementById("draft-section").style.display == "none" ? "block" : "none"
+        } else {
+            document.getElementById("draft-section").style.display = "none"
+            document.getElementById("start-draft-button").style.display = document.getElementById("show-draft-button").style.color == "black" ? "block" : "none"
+        }
+        document.getElementById("show-draft-button").style.color = document.getElementById("show-draft-button").style.color == "black" ? "red" : "black"
+    } else {
+        document.getElementById("draft-section").style.display = "none"
+        document.getElementById("start-draft-button").style.display = "none"
+        document.getElementById("show-draft-button").style.color = "black"
+
+    }
 }
 
 setTimeout(() => {
@@ -727,7 +764,7 @@ document.getElementsByTagName("body")[0].addEventListener("keydown", function(e)
     }
 });
 
-document.getElementsByTagName("body")[0].addEventListener("click", function(e){
+document.getElementsByTagName("body")[0].addEventListener("click", async function(e){
     if(e.target.id == "sign-in-form-submit"){
         document.getElementById("sign-in-form").addEventListener("submit", function(e){
             e.preventDefault();
@@ -755,6 +792,7 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
                         alert("Username does not exist")
                     }
                 } else {
+                    startDraft()
                     loadHtml(res, "none")
                 }
             });
@@ -888,9 +926,16 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
             return response.json(); 
         })
         .then(function(res){ 
-            loadHtml(res, "block");
+            loadHtml(res, "none");
             window.location.reload();
         });
+    } else if (e.target.id == "pause-draft-button"){
+        clearInterval(draftTimerIntervals[0])
+    } else if (e.target.id == "start-draft-button"){
+        let {user} = await getLoggedInUser();
+        let draftTimer = await getDraftTimer();
+        startDraftTimer();
+        loadHtml({success: true, user},"block")
     } else if (e.target.id == "set-timer-button"){
         const timerInputValue = document.getElementById("set-timer-input").value;
         fetch("/api/draft")
@@ -921,7 +966,7 @@ document.getElementsByTagName("body")[0].addEventListener("click", function(e){
     }
 })
 
-document.getElementsByTagName("body")[0].addEventListener("change", function(e){
+document.getElementsByTagName("body")[0].addEventListener("change", async function(e){
     let availablePlayerSearchValue;
     if(document.getElementById("search-available-player") != null){
         availablePlayerSearchValue = document.getElementById("search-available-player").value;
@@ -1043,5 +1088,39 @@ document.getElementsByTagName("body")[0].addEventListener("change", function(e){
         document.getElementById("available-players-ul").innerHTML = filteredPlayers;
     } else if (e.target.id == "confirm-reset-checkbox"){
         document.getElementById("reset-draft-button").disabled = !document.getElementById("reset-draft-button").disabled
+    } else if (e.target.id == "team-to-trade-with"){
+        const tradeReceiver = document.getElementById("team-to-trade-with").value.split("+").join(" ")
+        const loggedInUser = await getLoggedInUser();
+        const draft = await getDraft();
+        const allKeepers = await getKeepers();
+
+        let tradeRostersDraftPicks = {};
+        tradeRostersDraftPicks[loggedInUser.user] = {role: "initiator", draft: draft.filter((dp) => dp.team == loggedInUser.user), keepers: allKeepers.filter((k) => k.team == loggedInUser.user)}
+        tradeRostersDraftPicks[tradeReceiver] = {role: "receiver", draft: draft.filter((dp) => dp.team == tradeReceiver), keepers: allKeepers.filter((k) => k.team == tradeReceiver)}
+        
+        let makeTradeHtml = "";
+        for(i in tradeRostersDraftPicks){
+            makeTradeHtml += `<div class='well teams-players-well' id="${i.split(" ").join("&")}-well-2" style='width: 300px; margin: 3px;'><h1>${i}</h1><ul id="${i.split(" ").join("&")}-team-list" style='list-style-type: none;'>`
+            makeTradeHtml += "<h2>Keepers</h2>";
+            makeTradeHtml += "<ul style='list-style-type: none;'>"
+            tradeRostersDraftPicks[i].keepers.forEach((p) => {
+                makeTradeHtml += "<li><input type='checkbox'/>" + p.name + "</li>"
+            })
+            makeTradeHtml += "</ul>"
+            makeTradeHtml += "<h2>Draft</h2>";
+            makeTradeHtml += "<h3>Players Picked</h3>";
+            makeTradeHtml += "<ul style='list-style-type: none;'>"
+            tradeRostersDraftPicks[i].draft.filter((p) => p.name != null).forEach((p) => {
+                makeTradeHtml += "<li>" + p.name + "</li>"
+            })
+            makeTradeHtml += "</ul>";
+            makeTradeHtml += "<h3>Draft Picks Left</h3>";
+            tradeRostersDraftPicks[i].draft.filter((p) => p.name == null).forEach((dp) => {
+                makeTradeHtml += "<li>Round: " + dp.round + ", Pick: " + dp.pick + "</li>"
+            })
+            makeTradeHtml += "</ul>"
+            makeTradeHtml += "</div>";
+        }
+        document.getElementById("make-trade-div").innerHTML = makeTradeHtml
     }
 });

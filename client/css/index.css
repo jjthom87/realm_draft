@@ -151,3 +151,14 @@ tfoot td {
     transform: translateY(5px);
   }
 }
+
+#start-draft-button {
+  display: block;
+  margin-left: 100px;
+  margin-top: 25px;
+  height: 50px;
+  background-color: blue;
+  color: white;
+  width: 150px;
+  font-size: 25px;
+}

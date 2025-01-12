@@ -176,7 +176,7 @@ router.get('/keepers', (req, res) => {
         .select('*')
         .where({ keeper: true })
     .then(data => {
-        res.status(200).json({ success: true, data: data, user: req.user.username });
+        res.status(200).json({ success: true, data: data });
     })
     .catch(err => {
         console.error('Error ', err);
