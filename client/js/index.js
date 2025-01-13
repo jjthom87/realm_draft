@@ -174,7 +174,11 @@ function startDraftTimer(){
             let loggedInUser = await getLoggedInUser();
             if(loggedInUser.user != null){
                 let currentDraftPick = await getDraftTimer();
-                if(new Date(currentDraftPick.data.draftPickDeadline) > new Date()){
+                if(currentDraftPick.data.draftPickDeadline && currentDraftPick.data.draftPickDeadline.toString().includes("5555")){
+                    document.getElementById("continue-draft-button").style.display = "block";
+                    document.getElementById("draft-paused-text").style.display = "block";
+                    document.getElementById("draft-section").style.display = "none";
+                } else if (new Date(currentDraftPick.data.draftPickDeadline) > new Date()){
                     document.getElementById("draft-timer").innerText = "Draft Pick Deadline: " + currentDraftPick.data.draftPickDeadline
                 } else {
                     fetch("/api/draft/pick", {
@@ -226,15 +230,15 @@ function startDraftTimer(){
 async function startDraft(){
     let draft = await getDraft();
     let {user} = await getLoggedInUser();
-    let draftHasStarted = draft.filter(d => !d.draftPickDeadline.toString().includes('9999')).length > 0;
+    let draftHasNotStarted = draft.every(d => d.draftPickDeadline.toString().includes('9999'))
 
     if(user == null){
         loadHtml({success: false}, "none")
     } else {
-        if(draftHasStarted){
-            startDraftTimer()
-        } else {
+        if(draftHasNotStarted){
             loadHtml({success: true, user}, "none")
+        } else {
+            startDraftTimer()
         }
     }
 }
@@ -257,7 +261,7 @@ async function loadHtml(res, draftDisplay){
         let buttonsHtml = '<div><button style="margin: 2px; color: black;" id="show-draft-button">Draft</button><button style="margin: 2px;" id="show-keepers-button">Keepers</button><button style="margin: 2px;" id="show-all-teams-button">Teams</button><button style="margin: 2px;" id="show-all-available-players-button">Available Players</button><button style="margin: 2px;" id="show-rosters-draft-picks-button">Rosters | Draft Picks</button><button style="margin: 2px;" id="show-trades-button">Trades</button></div>'
 
 
-        let draftHtml = `<button id="start-draft-button" style="display: none">Start Draft</button><div id="draft-section" style="display: ${draftDisplay};">`;
+        let draftHtml = `<button id="start-draft-button" style="display: none">Start Draft</button><h1 id='draft-paused-text' style='color: orange; display: none;'>Draft Paused</h1><button id='continue-draft-button' style='color: green; display: none; background-color: black; font-size: 31px;'>Continue Draft</button><div id="draft-section" style="display: ${draftDisplay};">`;
 
         draftHtml += "<span style='float: right;'>Confirm Reset <input type='checkbox' id='confirm-reset-checkbox' /></span><button disabled style='background-color: red; color: white; float: right;' id='reset-draft-button'>Reset Draft</button><button style='background-color: orange; color: white; float: right;' id='pause-draft-button'>Pause Draft</button><br>"
         draftHtml += `<p><div style='float: right;'><input placeholder='seconds, minutes, or hours i.e. 10 seconds' style='width: 275px;' id='set-timer-input'/><button id='set-timer-button'>Set Timer</button></div></p><br><br>`
@@ -271,7 +275,7 @@ async function loadHtml(res, draftDisplay){
         }
 
         let currentDraftPick = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.includes('6666'));
-        let draftHasStarted = draft.filter(d => !d.draftPickDeadline.toString().includes('9999')).length > 0;
+        let draftHasStarted = draft.some(d => !d.draftPickDeadline.toString().includes('9999'));
 
         if(draftHasStarted){
             let draftTimer = await getDraftTimer();
@@ -497,7 +501,7 @@ async function showCorrectSection(inputSection){
     })
 
     if (inputSection == "draft"){
-        let draftHasStarted = draft.filter(d => !d.draftPickDeadline.toString().includes('9999')).length > 0;
+        let draftHasStarted = draft.some(d => !d.draftPickDeadline.toString().includes('9999'));
         if(draftHasStarted){
             document.getElementById("draft-section").style.display = document.getElementById("draft-section").style.display == "none" ? "block" : "none"
         } else {
@@ -930,7 +934,37 @@ document.getElementsByTagName("body")[0].addEventListener("click", async functio
             window.location.reload();
         });
     } else if (e.target.id == "pause-draft-button"){
-        clearInterval(draftTimerIntervals[0])
+        let draft = await getDraft();
+        const currentPick = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.includes('6666'))
+        fetch("/api/draft/pick", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({state: "paused", draftPickDeadline: '5555-12-31 00:00:00', round: currentPick.round, pick: currentPick.pick})
+        })
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){
+            loadHtml(res, "block")
+        });
+    } else if (e.target.id == "continue-draft-button"){
+        let draft = await getDraft();
+        const currentPick = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.includes('6666'))
+        fetch("/api/draft/pick", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({state: "continued", draftPickDeadline: '5555-12-31 00:00:00', round: currentPick.round, pick: currentPick.pick})
+        })
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){
+            loadHtml(res, "block")
+        });
     } else if (e.target.id == "start-draft-button"){
         let {user} = await getLoggedInUser();
         let draftTimer = await getDraftTimer();

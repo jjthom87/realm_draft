@@ -22,7 +22,7 @@ router.get('/draft/players', (req, res) => {
 
 router.put('/draft/pick', async (req, res) => {
     let draftPickObject;
-    if(req.body.draftPickDeadline && req.body.draftPickDeadline.toString().includes('6666') && req.body.name == null){
+    if(req.body.draftPickDeadline && (req.body.draftPickDeadline.toString().includes('6666') || req.body.draftPickDeadline.toString().includes('5555')) && req.body.name == null){
         draftPickObject = 
         {
             draftPickDeadline: req.body.draftPickDeadline
@@ -58,6 +58,18 @@ router.put('/draft/pick', async (req, res) => {
                 } else {
                     res.status(200).json({ success: true, data: data, user: req.user.username });
                 }
+            } else if (req.body.draftPickDeadline && req.body.draftPickDeadline.includes("5555")){
+                let draftPickDeadline = req.body.state == "paused" ? '5555-12-31 00:00:00' : setDraftPickDeadline()
+                knex('draft').where({ round: req.body.round, pick: req.body.pick }).update(
+                    {
+                        draftPickDeadline: draftPickDeadline
+                    }
+                ).then(data => {
+                    res.status(200).json({ success: true, data: data, user: req.user.username, currentDraftPick: {pick: nextPick, round: round, draftPickDeadline: nextPickDeadline} });
+                })
+                .catch(err => {
+                    console.error('Error ', err);
+                });
             } else {
                 if(req.body.pick == 14){
                     nextPick = 1;
