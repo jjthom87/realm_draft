@@ -173,9 +173,9 @@ async function getCurrentPick(){
 async function runDraftTimer() {
     schedule.scheduleJob('*/1 * * * *', async function(){
         const draft = await getDraft();
-        let draftHasNotStarted = draft.every(d => d.draftPickDeadline.toString().includes('9999'));
+        let draftHasStarted = draft.some(d => !d.draftPickDeadline.toString().includes('9999'));
         let draftHasPaused = draft.some(d => d.draftPickDeadline.toString().includes('5555'));
-        if(draftHasNotStarted || draftHasPaused){
+        if(draftHasStarted || !draftHasPaused){
             const currentDraftPick = await getCurrentPick();
             let draftPickDeadline = setDraftPickDeadline(currentDraftPick.draftPickDeadline);
             if(new Date(draftPickDeadline.toString()) < new Date()){
