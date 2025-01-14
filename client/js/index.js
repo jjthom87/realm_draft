@@ -452,7 +452,7 @@ async function loadHtml(res, draftDisplay){
             let allTradesHtml = "<div id='trades-section' style='display: none;'><h2>Who would you like to trade with?</h2>"
             allTradesHtml += "<select id='team-to-trade-with'>"
             allTradesHtml += '<option value="" disabled selected hidden>Select Team</option>'
-            allFantasyTeamNames.forEach((team) => {
+            allFantasyTeamNames.filter((team) => team != user).forEach((team) => {
                 allTradesHtml += "<option value="+team.split(" ").join("+")+">"+team+"</option>"
             })
             allTradesHtml += "</select>"
@@ -980,7 +980,7 @@ document.getElementsByTagName("body")[0].addEventListener("click", async functio
         });
     } else if (e.target.id == "start-draft-button"){
         let {user} = await getLoggedInUser();
-        let draftTimer = await getDraftTimer();
+        await getDraftTimer();
         startDraftTimer();
         loadHtml({success: true, user},"block")
     } else if (e.target.id == "set-timer-button"){
@@ -1010,6 +1010,37 @@ document.getElementsByTagName("body")[0].addEventListener("click", async functio
                 loadHtml(res, "block")
             });
         })
+    } else if (e.target.id == "propose-trade-button"){
+        const tradeItems = document.getElementsByClassName("trade-items")
+        const checkedItems = []
+        for(let i = 0; i < tradeItems.length; i++){
+            if(tradeItems[i].checked){
+                checkedItems.push(tradeItems[i])
+            }
+        }
+        const overallTrade = {initiator: {trading: []}, receiver: {trading: []}}
+        checkedItems.forEach((ci) => {
+            const team = ci.id.split("-")[0].split("&").join(" ");
+            const tradeRole = ci.id.split("-")[1]
+
+            overallTrade[tradeRole]['team'] = team
+            overallTrade[tradeRole]['trading'].push(ci.value.split("+").join(" "))
+        })
+
+        fetch("/api/trade", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(overallTrade)
+        })
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){ 
+            console.log(res)
+            document.getElementById("trade-sent-text").style.display = "block"
+        });
     }
 })
 
@@ -1139,35 +1170,32 @@ document.getElementsByTagName("body")[0].addEventListener("change", async functi
         const tradeReceiver = document.getElementById("team-to-trade-with").value.split("+").join(" ")
         const loggedInUser = await getLoggedInUser();
         const draft = await getDraft();
-        const allKeepers = await getKeepers();
+        const teamsPlayers = await getAllTeams();
 
         let tradeRostersDraftPicks = {};
-        tradeRostersDraftPicks[loggedInUser.user] = {role: "initiator", draft: draft.filter((dp) => dp.team == loggedInUser.user), keepers: allKeepers.filter((k) => k.team == loggedInUser.user)}
-        tradeRostersDraftPicks[tradeReceiver] = {role: "receiver", draft: draft.filter((dp) => dp.team == tradeReceiver), keepers: allKeepers.filter((k) => k.team == tradeReceiver)}
+        tradeRostersDraftPicks[loggedInUser.user] = {role: "initiator", draft: draft.filter((dp) => dp.team == loggedInUser.user), players: teamsPlayers.filter((tp) => tp.team == loggedInUser.user)}
+        tradeRostersDraftPicks[tradeReceiver] = {role: "receiver", draft: draft.filter((dp) => dp.team == tradeReceiver), players: teamsPlayers.filter((tp) => tp.team == tradeReceiver)}
         
-        let makeTradeHtml = "";
+        let makeTradeHtml = "<div id='trade-wells' style='display: flex;'>";
         for(i in tradeRostersDraftPicks){
             makeTradeHtml += `<div class='well teams-players-well' id="${i.split(" ").join("&")}-well-2" style='width: 300px; margin: 3px;'><h1>${i}</h1><ul id="${i.split(" ").join("&")}-team-list" style='list-style-type: none;'>`
-            makeTradeHtml += "<h2>Keepers</h2>";
+            makeTradeHtml += "<h2>Players</h2>";
             makeTradeHtml += "<ul style='list-style-type: none;'>"
-            tradeRostersDraftPicks[i].keepers.forEach((p) => {
-                makeTradeHtml += "<li><input type='checkbox'/>" + p.name + "</li>"
+            tradeRostersDraftPicks[i].players.forEach((p) => {
+                makeTradeHtml += "<li><input id=\""+i.split(" ").join("&")+"-"+tradeRostersDraftPicks[i].role+"-trade-items\" class='trade-items' value=\""+p.name.split(" ").join("+")+"\" type='checkbox'/>" + p.name + "</li>"
             })
             makeTradeHtml += "</ul>"
             makeTradeHtml += "<h2>Draft</h2>";
-            makeTradeHtml += "<h3>Players Picked</h3>";
+            makeTradeHtml += "<h3>Picks</h3>";
             makeTradeHtml += "<ul style='list-style-type: none;'>"
-            tradeRostersDraftPicks[i].draft.filter((p) => p.name != null).forEach((p) => {
-                makeTradeHtml += "<li>" + p.name + "</li>"
-            })
-            makeTradeHtml += "</ul>";
-            makeTradeHtml += "<h3>Draft Picks Left</h3>";
             tradeRostersDraftPicks[i].draft.filter((p) => p.name == null).forEach((dp) => {
-                makeTradeHtml += "<li>Round: " + dp.round + ", Pick: " + dp.pick + "</li>"
+                makeTradeHtml += "<li><input id=\""+i.split(" ").join("&")+"-"+tradeRostersDraftPicks[i].role+"-trade-items\" class='trade-items' value='Round:"+dp.round+"+Pick:"+dp.pick+"' type='checkbox'/>Round: " + dp.round + ", Pick: " + dp.pick + "</li>"
             })
             makeTradeHtml += "</ul>"
             makeTradeHtml += "</div>";
         }
+        makeTradeHtml += "</div>"
+        makeTradeHtml += "<br><button id='propose-trade-button' style='font-size: 25px; width: 200px;'>Propose Trade</button><h2 id='trade-sent-text' style='display:none;'>Trade Sent</h2>"
         document.getElementById("make-trade-div").innerHTML = makeTradeHtml
     }
 });

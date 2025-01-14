@@ -220,4 +220,21 @@ router.put('/keepers/:team', (req, res) => {
     });
 });
 
+router.post("/trade", (req, res) => {
+    knex("trades")
+    .insert({
+      initiator: req.body.initiator.team,
+      receiver: req.body.receiver.team,
+      initiator_players: req.body.initiator.trading.toString(),
+      receiver_players: req.body.receiver.trading.toString()
+    })
+    .then(response => {
+      res.json({success: true, response});
+    })
+    .catch(error => {
+      console.error('Error with a trade ', error);
+      res.json({success: false, error})
+    });
+})
+
 module.exports = router;
