@@ -177,7 +177,6 @@ function startDraftTimer(){
                 if(currentDraftPick.data.draftPickDeadline && currentDraftPick.data.draftPickDeadline.toString().includes("5555")){
                     document.getElementById("continue-draft-button").style.display = "block";
                     document.getElementById("draft-paused-text").style.display = "block";
-                    document.getElementById("draft-section").style.display = "none";
                 } else if (new Date(currentDraftPick.data.draftPickDeadline) > new Date()){
                     document.getElementById("draft-timer").innerText = "Draft Pick Deadline: " + currentDraftPick.data.draftPickDeadline
                 } else {
@@ -263,8 +262,8 @@ async function loadHtml(res, draftDisplay){
 
         let draftHtml = `<button id="start-draft-button" style="display: none">Start Draft</button><h1 id='draft-paused-text' style='color: orange; display: none;'>Draft Paused</h1><button id='continue-draft-button' style='color: green; display: none; background-color: black; font-size: 31px;'>Continue Draft</button><div id="draft-section" style="display: ${draftDisplay};">`;
 
-        draftHtml += "<span style='float: right;'>Confirm Reset <input type='checkbox' id='confirm-reset-checkbox' /></span><button disabled style='background-color: red; color: white; float: right;' id='reset-draft-button'>Reset Draft</button><button style='background-color: orange; color: white; float: right;' id='pause-draft-button'>Pause Draft</button><br>"
-        draftHtml += `<p><div style='float: right;'><input placeholder='seconds, minutes, or hours i.e. 10 seconds' style='width: 275px;' id='set-timer-input'/><button id='set-timer-button'>Set Timer</button></div></p><br><br>`
+        draftHtml += "<span id='draft-controls-section'><span style='float: right;'>Confirm Reset <input type='checkbox' id='confirm-reset-checkbox' /></span><button disabled style='background-color: red; color: white; float: right;' id='reset-draft-button'>Reset Draft</button><button style='background-color: orange; color: white; float: right;' id='pause-draft-button'>Pause Draft</button><br>"
+        draftHtml += `<p><div style='float: right;'><input placeholder='seconds, minutes, or hours i.e. 10 seconds' style='width: 275px;' id='set-timer-input'/><button id='set-timer-button'>Set Timer</button></div></p></span><br><br>`
 
         let lastPick = draft.filter((dp) => dp.name != null).pop();
         if(lastPick == undefined){
@@ -501,19 +500,30 @@ async function showCorrectSection(inputSection){
     })
 
     if (inputSection == "draft"){
-        let draftHasStarted = draft.some(d => !d.draftPickDeadline.toString().includes('9999'));
-        if(draftHasStarted){
-            document.getElementById("draft-section").style.display = document.getElementById("draft-section").style.display == "none" ? "block" : "none"
-        } else {
+        if(document.getElementById("show-draft-button").style.color == "red"){
             document.getElementById("draft-section").style.display = "none"
-            document.getElementById("start-draft-button").style.display = document.getElementById("show-draft-button").style.color == "black" ? "block" : "none"
+            document.getElementById("start-draft-button").style.display = "none"
+            document.getElementById("show-draft-button").style.color = "black"
+        } else {
+            let draftHasNotStarted = draft.every(d => d.draftPickDeadline.toString().includes('9999'));
+            let draftIsPaused = draft.some(d => d.draftPickDeadline.toString().includes('5555'));
+            if(draftHasNotStarted){
+                document.getElementById("start-draft-button").style.display = "block"
+                document.getElementById("draft-section").style.display = "block"
+                document.getElementById("draft-controls-section").style.display = "none"
+            } else if (draftIsPaused){
+                document.getElementById("draft-section").style.display = "block"
+                document.getElementById("draft-controls-section").style.display = "none"
+            } else {
+                document.getElementById("draft-controls-section").style.display = "block"
+                document.getElementById("draft-section").style.display = "block"
+            }
+            document.getElementById("show-draft-button").style.color = document.getElementById("show-draft-button").style.color == "black" ? "red" : "black"
         }
-        document.getElementById("show-draft-button").style.color = document.getElementById("show-draft-button").style.color == "black" ? "red" : "black"
     } else {
         document.getElementById("draft-section").style.display = "none"
         document.getElementById("start-draft-button").style.display = "none"
         document.getElementById("show-draft-button").style.color = "black"
-
     }
 }
 
@@ -930,11 +940,12 @@ document.getElementsByTagName("body")[0].addEventListener("click", async functio
             return response.json(); 
         })
         .then(function(res){ 
-            loadHtml(res, "none");
+            loadHtml(res, "block");
             window.location.reload();
         });
     } else if (e.target.id == "pause-draft-button"){
         let draft = await getDraft();
+        document.getElementById("draft-controls-section").style.display = "none";
         const currentPick = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.includes('6666'))
         fetch("/api/draft/pick", {
             method: "PUT",
@@ -947,10 +958,12 @@ document.getElementsByTagName("body")[0].addEventListener("click", async functio
             return response.json(); 
         })
         .then(function(res){
-            loadHtml(res, "block")
+            // loadHtml(res, "block")
+            document.getElementById("draft-timer").innerText = "Draft Pick Deadline: PENDING"
         });
     } else if (e.target.id == "continue-draft-button"){
         let draft = await getDraft();
+        document.getElementById("draft-controls-section").style.display = "block";
         const currentPick = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.includes('6666'))
         fetch("/api/draft/pick", {
             method: "PUT",
