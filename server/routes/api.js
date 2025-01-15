@@ -237,4 +237,14 @@ router.post("/trade", (req, res) => {
     });
 })
 
+router.get("/trades", (req,res) => {
+    knex('trades')
+    .then(data => {
+        res.status(200).json({ success: true, data: data });
+    })
+    .catch(err => {
+        console.error('Error ', err);
+    });
+})
+
 module.exports = router;

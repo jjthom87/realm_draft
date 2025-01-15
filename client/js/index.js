@@ -111,6 +111,16 @@ async function getDraftTimer(){
         })
 }
 
+async function getTrades(){
+    return fetch("/api/trades")
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){
+            return res;
+        })
+}
+
 async function getKeepers(team){
     let api = team != null ? `/api/keepers/${team}` : '/api/keepers'
     return fetch(api)
@@ -247,6 +257,7 @@ async function loadHtml(res, draftDisplay){
     if(res.success){
         let draft = await getDraft();
         let allKeepers = await getKeepers();
+        const trades = await getTrades();
 
         document.getElementById("loader-div").style.display = "block";
         
@@ -449,7 +460,22 @@ async function loadHtml(res, draftDisplay){
             }
             allRosterDraftPicksHtml += "</div>";
 
-            let allTradesHtml = "<div id='trades-section' style='display: none;'><h2>Who would you like to trade with?</h2>"
+            let allTradesHtml = "<div id='trades-section' style='display: none;'>"
+            allTradesHtml += "<h2>Your Open Trades</h2>"
+            const yourTrades = trades.data.filter((t) => t.initiator == user || t.receiver == user)
+            const tradesYouInitiated = trades.data.filter((t) => t.initiator == user)
+            const tradesTheyInitiated = trades.data.filter((t) => t.receiver == user)
+            if(yourTrades.length > 0 && tradesYouInitiated.length > 0){
+                allTradesHtml += "<table>"
+                allTradesHtml += '<thead><tr><th scope="col">Receiver</th><th scope="col">You\'re Giving</th><th scope="col">You\'re Requesting</th><th scope="col">Status</th></tr></thead>';
+                tradesYouInitiated.forEach((t) => {
+                    if(!t.approved_by_receiver && !t.commissioner_approver){
+                        allTradesHtml += '<tr><td>' + t.receiver + '</td><td>' + t.initiator_players.split(",").join("<br>") + '</td><td>' + t.receiver_players.split(",").join("<br>") + '</td><td>Awaiting Approval from ' + t.receiver + '</td>';
+                    }
+                })
+                allTradesHtml += "</table>"
+            }
+            allTradesHtml += "<h2>Who would you like to trade with?</h2>"
             allTradesHtml += "<select id='team-to-trade-with'>"
             allTradesHtml += '<option value="" disabled selected hidden>Select Team</option>'
             allFantasyTeamNames.filter((team) => team != user).forEach((team) => {
