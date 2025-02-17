@@ -108,7 +108,7 @@ function loadPlayersToDb(){
         const access_token = res.data.access_token
         const refresh_token = res.data.refresh_token
     
-        let totalPlayers = 2225;
+        let totalPlayers = 2275;
         // let totalPlayers = 100;
         let start = 1;
     
@@ -180,7 +180,7 @@ function loadTeamsPlayersToDb(){
         }
     })
 }
-loadTeamsPlayersToDb();
+// loadTeamsPlayersToDb();
 
 // makeAPIrequest("https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games;game_keys=mlb/teams")
 

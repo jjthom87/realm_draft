@@ -40,20 +40,37 @@ function sortDraftArray(draftArray){
 function createDraftInDb(){
     let round = 1;
     let pick = 1;
-    let preSortedDraft = []
-    knex('teams_players')
-    .select("*")
-    .then(tsps => {
-        let teams = [];
-        tsps.forEach((tp) => {
-            if(!teams.includes(tp.team)){
-                teams.push(tp.team)
-            }
-        })
+    let preSortedDraft = [];
+    let regNum = 0
+    let snakeNum = 0
+    // knex('teams_players')
+    // .select("*")
+    // .then(tsps => {
+        let teams = ["Murderers' Row", "Loss of Foresight", "Prestige Worldwide", "All that YAZ", "Sprokketts", "Dynasty Makers", "HeRowe Keepers", "Help Us Mookie!", "Radioactive Moose", "RBI'd 4 Her Pleasure", "Latrell Lamar", "Ya Gotta Believe", "Take it Deep", "Big Wood Bison"];
+        // tsps.forEach((tp) => {
+        //     if(!teams.includes(tp.team)){
+        //         teams.push(tp.team)
+        //     }
+        // })
+    
     
         teams.forEach((team) => {
             while(round <= 16){
-                preSortedDraft.push({team, round, pick})
+                if(round % 2 == 1){
+                    preSortedDraft.push({team, round, pick})
+                }
+                round++;
+            }
+            pick++;
+            round = 1;
+        });
+
+        pick = 1;
+        teams.reverse().forEach((team) => {
+            while(round <= 16){
+                if(round % 2 == 0){
+                    preSortedDraft.push({team, round, pick})
+                }
                 round++;
             }
             pick++;
@@ -69,7 +86,7 @@ function createDraftInDb(){
             console.log('Error here', err);
         });
     
-    });
+    // });
 };
 // createDraftInDb()
 
@@ -110,10 +127,7 @@ function setDraftPickDeadline(currentDraftPickDeadline = null){
     }
 }
 
-async function sendEmailToNextPick(nextPick){
-    const users = await getUsers();
-    const nextPickUserEmail = users.find((user) => user.username == nextPick.team).email;
-
+async function sendEmail(email){
     const transporter = nodemailer.createTransport({
         host: "froofydoog.com",
         port: 465,
@@ -124,23 +138,37 @@ async function sendEmailToNextPick(nextPick){
         },
     });
     
-    console.log(nextPickUserEmail)
     const messageToClient = await transporter.sendMail({
         from: '"Draft Admin" <draft-admin@froofydoog.com>', // sender address
-        to: "draft-admin@froofydoog.com",//nextPickUserEmail, // list of receivers
-        subject: "Local - You're the next pick. Round: " + nextPick.round + ", Pick: " + nextPick.pick, // Subject line
-        html: "<div><a href='http://localhost:5050/#current-pick'>Go to draft</a><b>Good Luck!</b></div>", // html body
+        to: email.to,//nextPickUserEmail, // list of receivers
+        subject: email.subject, // Subject line
+        html: email.message // html body
     });
 
     const messageToServer = await transporter.sendMail({
         from: '"Draft Admin" <draft-admin@froofydoog.com>', // sender address
         to: "draft-admin@froofydoog.com", // list of receivers
-        subject: "Local - Draft Pick Made", // Subject line
-        text: JSON.stringify(nextPick), // plain text body
+        subject: email.commishSubject, // Subject line
+        text: email.commishMessage, // plain text body
     });
 
     console.log("Message sent to client: %s", messageToClient.messageId);
     console.log("Message sent to server: %s", messageToServer.messageId);
+}
+
+async function sendEmailToNextPick(nextPick){
+    const users = await getUsers();
+    const nextPickUserEmail = users.find((user) => user.username == nextPick.team).email;
+    
+    const email = {
+        to: "draft-admin@froofydoog.com",
+        subject: "Local - You're the next pick. Round: " + nextPick.round + ", Pick: " + nextPick.pick,
+        message: "<div><a href='http://localhost:5050/#current-pick'>Go to draft</a><b>Good Luck!</b></div>",
+        commishSubject: "Local - You're the next pick. Round: " + nextPick.round + ", Pick: " + nextPick.pick,
+        commishMessage: JSON.stringify(nextPick)
+    }
+    
+    sendEmail(email)
 }
 
 async function getCurrentPick(){
@@ -195,4 +223,4 @@ async function runDraftTimer() {
 }
 runDraftTimer();
 
-module.exports = { getCurrentPick, runDraftTimer, setDraftPickDeadline, getDraft, sendEmailToNextPick };
+module.exports = { getCurrentPick, runDraftTimer, setDraftPickDeadline, getDraft, sendEmailToNextPick, sendEmail };

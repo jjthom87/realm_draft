@@ -1,10 +1,14 @@
-const allAvailablePlayersToDraftArray = [];
 const draftTimerIntervals = [];
 
 let playerSearchValue = "";
+let teamDraftSearchValue = "";
 let availablePlayerSearchValue = "";
-const teamsPlayersHtml = []
+const teamsPlayersHtml = [];
+const teamsDraftsHtml = [];
 let keydownOnce = false;
+let keydownOnceTeamDraft = false;
+const commissioners = ["Help Us Mookie!", "Latrell Lamar", "RBI'd 4 Her Pleasure", "Sprokketts"];
+
 
 let positionsMap = {
     "1B": "First Baseman",
@@ -23,7 +27,7 @@ let teamsMap = {
     "Chicago Cubs": "CHC",
     "Arizona Diamondbacks": "AZ",
     "Philadelphia Phillies": "PHI",
-    "Oakland Athletics": "OAK",
+    "Athletics": "SAC",
     "San Francisco Giants": "SF",
     "San Diego Padres": "SD",
     "Los Angeles Dodgers": "LAD",
@@ -54,7 +58,7 @@ let teamsMap = {
     "CHC": "Chicago Cubs",
     "AZ": "Arizona Diamondbacks",
     "PHI": "Philadelphia Phillies",
-    "OAK": "Oakland Athletics",
+    "SAC": "Athletics",
     "SF": "San Francisco Giants",
     "SD": "San Diego Padres",
     "LAD": "Los Angeles Dodgers",
@@ -215,10 +219,10 @@ function startDraftTimer(){
                     const draft = await getDraft();
                     const amountOfDraftedPlayers = draft.filter((dp) => dp.name != null).length;
                     
-                    const trs = document.getElementsByTagName("tr")
+                    const trs = document.getElementsByClassName("draft-tr")
                     let totalPlayerTrs = 0;
                     for(let i = 0; i < trs.length; i++){
-                        if(trs[i].children[4].textContent != "PENDING" && trs[i].children[4].textContent != "Team"){
+                        if(trs[i].children[5].textContent != "PENDING" && trs[i].children[5].textContent != "Team"){
                             totalPlayerTrs++
                         }
                     }
@@ -268,7 +272,10 @@ async function loadHtml(res, draftDisplay){
 
         let welcomeHtml = "<h3>Welcome " + res.user + "</h3>";
 
-        let buttonsHtml = '<div><button style="margin: 2px; color: black;" id="show-draft-button">Draft</button><button style="margin: 2px;" id="show-keepers-button">Keepers</button><button style="margin: 2px;" id="show-all-teams-button">Teams</button><button style="margin: 2px;" id="show-all-available-players-button">Available Players</button><button style="margin: 2px;" id="show-rosters-draft-picks-button">Rosters | Draft Picks</button><button style="margin: 2px;" id="show-trades-button">Trades</button></div>'
+        let buttonsHtml = '<div><button style="margin: 2px; color: black;" id="show-draft-button">Draft</button><button style="margin: 2px;" id="show-keepers-button">Keepers</button><button style="margin: 2px;" id="show-all-teams-button">Teams</button><button style="margin: 2px;" id="show-all-available-players-button">Available Players</button><button style="margin: 2px;" id="show-rosters-draft-picks-button">Rosters | Draft Picks</button>'
+        let displayAsterisk = trades.data.filter((t) => t.receiver == user && !t.approved_by_receiver && !t.trade_rejected && !t.commissioner_approved).length > 0 ? "*" : ""
+        buttonsHtml += '<button style="margin: 2px;" id="show-trades-button">Trades'+displayAsterisk+'</button>'
+        buttonsHtml += '</div>'
 
 
         let draftHtml = `<button id="start-draft-button" style="display: none">Start Draft</button><h1 id='draft-paused-text' style='color: orange; display: none;'>Draft Paused</h1><button id='continue-draft-button' style='color: green; display: none; background-color: black; font-size: 31px;'>Continue Draft</button><div id="draft-section" style="display: ${draftDisplay};">`;
@@ -296,7 +303,7 @@ async function loadHtml(res, draftDisplay){
     
             draftHtml += currentPickHtml;
             draftHtml += "<table>";
-            draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col">Position</th></tr></thead>';
+            draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Overall Pick</th><th scope="col">Fantasy Team</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col">Position</th></tr></thead>';
     
             let draftTable = ""
             let current = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.includes('6666'));
@@ -306,21 +313,21 @@ async function loadHtml(res, draftDisplay){
                 if(dp.name == null){
                     if(dp.round == current.round && dp.pick == current.pick){
                         // if(dp.team == user){
-                                draftTable += `<tr style='background-color: #add898; font-weight: bold;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} id='player-pick-input'/><button id='submit-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
+                                draftTable += `<tr class='draft-tr' style='background-color: #add898; font-weight: bold;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td>${((dp.round - 1) * 14) + dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} id='player-pick-input'/><button id='submit-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
                         // } else {
-                        //     draftTable += `<tr style='background-color: #add898;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td style="color: #27477f">CURRENT PICK</td><td>PENDING</td></tr>`   
+                        //     draftTable += `<tr class='draft-tr' style='background-color: #add898;' id='current-pick'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td style="color: #27477f">CURRENT PICK</td><td>PENDING</td></tr>`   
                         // }
                     } else if (dp.draftPickDeadline.includes('6666')){
                         // if(dp.team == user){
-                            draftTable += `<tr style='background-color: #FF7F7F; font-weight: bold;' id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} class='missed-player-pick-input'/><button class='submit-missed-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
+                            draftTable += `<tr class='draft-tr' style='background-color: #FF7F7F; font-weight: bold;' id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td>${((dp.round - 1) * 14) + dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} class='missed-player-pick-input'/><button class='submit-missed-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
                         // } else {
-                        //     draftTable += `<tr style='background-color: #FF7F7F;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>MISSED PICK</td><td>PENDING</td></tr>`   
+                        //     draftTable += `<tr class='draft-tr' style='background-color: #FF7F7F;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>MISSED PICK</td><td>PENDING</td></tr>`   
                         // }
                     } else {
-                        draftTable += `<tr id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>PENDING</td><td>PENDING</td><td>PENDING</td></tr>`
+                        draftTable += `<tr class='draft-tr' id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td>${((dp.round - 1) * 14) + dp.pick}</td><td ${userHtml}>${dp.team}</td><td>PENDING</td><td>PENDING</td><td>PENDING</td></tr>`
                     }
                 } else {
-                    draftTable += `<tr id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
+                    draftTable += `<tr class='draft-tr' id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td>${((dp.round - 1) * 14) + dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team == "null" ? "Team Pending" : dp.player_team}</td><td>${dp.position}</td></tr>`
                 }
             });
             draftHtml += draftTable
@@ -330,7 +337,7 @@ async function loadHtml(res, draftDisplay){
             draftHtml += draftTimerHtml;
     
             draftHtml += "<table>";
-            draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col">Position</th></tr></thead>';
+            draftHtml += '<thead><tr><th scope="col">Round</th><th scope="col">Pick</th><th scope="col">Overall Pick</th><th scope="col">Fantasy Team</th><th scope="col">Player</th><th scope="col">Team</th><th scope="col">Position</th></tr></thead>';
     
             let draftTable = ""
             let current = draft.find((dp) => dp.name == null && !dp.draftPickDeadline.includes('6666'));
@@ -340,19 +347,19 @@ async function loadHtml(res, draftDisplay){
                 if (dp.draftPickDeadline.includes('6666')){
                     if(!dp.name){
                         // if(dp.team == user){
-                            draftTable += `<tr style='background-color: #FF7F7F; font-weight: bold;' id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} class='missed-player-pick-input'/><button class='submit-missed-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
+                            draftTable += `<tr class='draft-tr' style='background-color: #FF7F7F; font-weight: bold;' id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td>${((dp.round - 1) * 14) + dp.pick}</td><td ${userHtml}>${dp.team}</td><td><input round=${dp.round} pick=${dp.pick} class='missed-player-pick-input'/><button class='submit-missed-player-pick' style='border: 2px solid black;'>Submit Pick</button></td><td>PENDING</td><td>PENDING</td></tr>`
                         // } else {
                         //     draftTable += `<tr style='background-color: #FF7F7F;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>MISSED PICK</td><td>PENDING</td></tr>`   
                         // }
                     } else {
                         // if(dp.team == user){
-                            draftTable += `<tr id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
+                            draftTable += `<tr class='draft-tr' id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td>${((dp.round - 1) * 14) + dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team == "null" ? "Team Pending" : dp.player_team}</td><td>${dp.position}</td></tr>`
                             // } else {
                             //     draftTable += `<tr style='background-color: #FF7F7F;'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>MISSED PICK</td><td>PENDING</td></tr>`   
                             // }
                     }
                 } else {
-                    draftTable += `<tr id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team}</td><td>${dp.position}</td></tr>`
+                    draftTable += `<tr class='draft-tr' id='round-${dp.round}-pick-${dp.pick}'><th scope="row">${dp.round}</th><td>${dp.pick}</td><td>${((dp.round - 1) * 14) + dp.pick}</td><td ${userHtml}>${dp.team}</td><td>${dp.name}</td><td>${dp.player_team == "null" ? "Team Pending" : dp.player_team}</td><td>${dp.position}</td></tr>`
                 }
             });
             draftHtml += draftTable
@@ -417,14 +424,15 @@ async function loadHtml(res, draftDisplay){
         availablePlayersToDraft().then((availablePlayersToDraft) => {
             availablePlayersToDraft.forEach((availablePlayerToDraft) => {
                 allAvailablePlayersHtml += "<li class='available-players-li'><a href='"+availablePlayerToDraft.url+"' target='_blank'>"+availablePlayerToDraft.details+"</a></li>";
-                allAvailablePlayersToDraftArray.push(availablePlayerToDraft)
             })
 
             allAvailablePlayersHtml += "</ul></div>"
 
-            const allFantasyTeamNames = ["Big Wood Bison", "Dynasty Makers", "Help Us Mookie!", "HeRowe Keepers", "Latrell Lamar", "Loss of Foresight", "Pathetic Loser", "Prestige Worldwide", "Radioactive Moose", "RBI'd 4 Her Pleasure", "Springfield Isotopes", "Sprokketts", "Take it Deep", "Ya Gotta Believe"];
+            let allFantasyTeamNames = ["Big Wood Bison", "Dynasty Makers", "Help Us Mookie!", "HeRowe Keepers", "Latrell Lamar", "Loss of Foresight", "All that YAZ", "Prestige Worldwide", "Radioactive Moose", "RBI'd 4 Her Pleasure", "Murderers' Row", "Sprokketts", "Take it Deep", "Ya Gotta Believe"];
+            allFantasyTeamNames.splice(allFantasyTeamNames.indexOf(user), 1);
+            allFantasyTeamNames.unshift(user)
 
-            let allRosterDraftPicksHtml = "<div id='rosters-draft-picks-section' style='display: none; flex-flow: wrap;'><br>"
+            let allRosterDraftPicksHtml = "<div id='rosters-draft-picks-section' style='display: none;'><br><input id='search-team' placeholder='Search by Team Name' style='width: 200px; display: block; margin: 0 auto;'/><br><div style='display: flex; flex-flow: wrap;' id='rosters-draft-picks-div'><br>"
             let allRostersDraftPicks = {};
             allFantasyTeamNames.forEach((team) => {
                 allRostersDraftPicks[team] = {draft: [], keepers: []}
@@ -437,7 +445,7 @@ async function loadHtml(res, draftDisplay){
             })
 
             for(i in allRostersDraftPicks){
-                allRosterDraftPicksHtml += `<div class='well teams-players-well' id="${i.split(" ").join("&")}-well-2" style='width: 300px; margin: 3px;'><h1>${i}</h1><ul id="${i.split(" ").join("&")}-team-list" style='list-style-type: none;'>`
+                allRosterDraftPicksHtml += `<div class='well teams-drafts-well' id="${i.split(" ").join("&")}-well-2" style='width: 300px; margin: 3px;'><h1 class='teams-draft-team-name'>${i}</h1><ul id="${i.split(" ").join("&")}-team-list" style='list-style-type: none;'>`
                 allRosterDraftPicksHtml += "<h2>Keepers</h2>";
                 allRosterDraftPicksHtml += "<ul style='list-style-type: none;'>"
                 allRostersDraftPicks[i].keepers.forEach((p) => {
@@ -459,30 +467,89 @@ async function loadHtml(res, draftDisplay){
                 allRosterDraftPicksHtml += "</div>";
             }
             allRosterDraftPicksHtml += "</div>";
+            allRosterDraftPicksHtml += "</div>";
 
             let allTradesHtml = "<div id='trades-section' style='display: none;'>"
-            allTradesHtml += "<h2>Your Open Trades</h2>"
-            const yourTrades = trades.data.filter((t) => t.initiator == user || t.receiver == user)
-            const tradesYouInitiated = trades.data.filter((t) => t.initiator == user)
-            const tradesTheyInitiated = trades.data.filter((t) => t.receiver == user)
-            if(yourTrades.length > 0 && tradesYouInitiated.length > 0){
-                allTradesHtml += "<table>"
-                allTradesHtml += '<thead><tr><th scope="col">Receiver</th><th scope="col">You\'re Giving</th><th scope="col">You\'re Requesting</th><th scope="col">Status</th></tr></thead>';
-                tradesYouInitiated.forEach((t) => {
-                    if(!t.approved_by_receiver && !t.commissioner_approver){
-                        allTradesHtml += '<tr><td>' + t.receiver + '</td><td>' + t.initiator_players.split(",").join("<br>") + '</td><td>' + t.receiver_players.split(",").join("<br>") + '</td><td>Awaiting Approval from ' + t.receiver + '</td>';
-                    }
-                })
-                allTradesHtml += "</table>"
-            }
-            allTradesHtml += "<h2>Who would you like to trade with?</h2>"
-            allTradesHtml += "<select id='team-to-trade-with'>"
-            allTradesHtml += '<option value="" disabled selected hidden>Select Team</option>'
-            allFantasyTeamNames.filter((team) => team != user).forEach((team) => {
-                allTradesHtml += "<option value="+team.split(" ").join("+")+">"+team+"</option>"
+            allTradesHtml += "<h2>All Trades</h2>"
+            const allTrades = trades.data.filter((t) => t.updated_in_yahoo)
+            allTradesHtml += "<h3>All Trades</h3><table>"
+            allTradesHtml += '<thead><tr><th scope="col">Team 1</th><th scope="col">Team 1 Gets</th><th scope="col">Team 2</th><th scope="col">Team 2 Gets</th></tr></thead>';
+            allTrades.forEach((t) => {
+                allTradesHtml += '<tr><td>' + t.receiver + '</td><td>' + t.receiver_players.split(",").join("<br>") + '</td><td>'+t.initiator+'</td><td>' + t.initiator_players.split(",").join("<br>") + '</td>';
             })
-            allTradesHtml += "</select>"
-            allTradesHtml += "<div id='make-trade-div'></div>"
+            allTradesHtml += "</table>"
+            allTradesHtml += "</div>"
+            // allTradesHtml += "<h2>Your Open Trades</h2>"
+            // const yourTrades = trades.data.filter((t) => t.initiator == user || t.receiver == user)
+            // const tradesYouInitiated = trades.data.filter((t) => t.initiator == user)
+            // const tradesTheyInitiated = trades.data.filter((t) => t.receiver == user)
+            // const yourRejectedTrades = trades.data.filter((t) => (t.initiator == user || t.receiver == user) && t.rejected)
+            // const yourApprovedTrades = trades.data.filter((t) => (t.initiator == user || t.receiver == user) && t.approved_by_receiver && t.commissioners_who_approved.split(",").length == 4)
+            
+            // if(yourTrades.length > 0){
+            //     if(tradesYouInitiated.length > 0){
+            //         allTradesHtml += "<h3>Trades to Them</h3><table>"
+            //         allTradesHtml += '<thead><tr><th scope="col">Receiver</th><th scope="col">You\'re Giving</th><th scope="col">You\'re Requesting</th><th scope="col">Status</th></tr></thead>';
+            //         tradesYouInitiated.forEach((t) => {
+            //             if(!t.approved_by_receiver && !t.commissioner_approved && !t.rejected){
+            //                 allTradesHtml += '<tr><td>' + t.receiver + '</td><td>' + t.initiator_players.split(",").join("<br>") + '</td><td>' + t.receiver_players.split(",").join("<br>") + '</td><td>Awaiting Approval from ' + t.receiver + '</td>';
+            //             } else if (t.approved_by_receiver && !t.commissioner_approved && !t.rejected){
+            //                 allTradesHtml += '<tr><td>' + t.receiver + '</td><td>' + t.initiator_players.split(",").join("<br>") + '</td><td>' + t.receiver_players.split(",").join("<br>") + '</td><td>Awaiting Approval from a Commish</td>';
+            //             }
+            //         })
+            //         allTradesHtml += "</table>"
+            //     }
+            //     if(tradesTheyInitiated.length > 0){
+            //         allTradesHtml += "<h3>Trades to You</h3><table>"
+            //         allTradesHtml += '<thead><tr><th scope="col">Initiator</th><th scope="col">They\'re Giving</th><th scope="col">They\'re Requesting</th><th scope="col">Status</th></tr></thead>';
+            //         tradesTheyInitiated.forEach((t) => {
+            //             if(!t.approved_by_receiver && !t.commissioner_approved){
+            //                 allTradesHtml += '<tr><td>' + t.initiator + '</td><td>' + t.initiator_players.split(",").join("<br>") + '</td><td>' + t.receiver_players.split(",").join("<br>") + '</td><td><button class="accept-trade-button" value='+t.ID+'>Accept Trade</button>&nbsp;<button class="reject-trade-button" value='+t.ID+'>Reject Trade</button></td>';
+            //             } else if (t.approved_by_receiver && !t.commissioner_approved){
+            //                 allTradesHtml += '<tr><td>' + t.initiator + '</td><td>' + t.initiator_players.split(",").join("<br>") + '</td><td>' + t.receiver_players.split(",").join("<br>") + '</td><td>Awaiting Commissioner Approval</td>';
+            //             } 
+            //         })
+            //         allTradesHtml += "</table>"
+            //     }
+            //     if(yourApprovedTrades.length > 0){
+            //         allTradesHtml += "<h3>Your Approved Trades</h3><table>"
+            //         allTradesHtml += '<thead><tr><th scope="col">Other Party</th><th scope="col">They Gave</th><th scope="col">You Gave</th><th scope="col">Processed</th></tr></thead>';
+            //         yourApprovedTrades.forEach((t) => {
+            //             allTradesHtml += '<tr><td>' + (t.initiator == user ? t.receiver : t.initiator) + '</td><td>' + (t.initiator == user ? t.receiver_players.split(",").join("<br>") : t.initiator_players.split(",").join("<br>")) + '</td><td>' + (t.initiator == user ? t.initiator_players.split(",").join("<br>") : t.receiver_players.split(",").join("<br>")) + '</td><td>' + (t.updated_in_yahoo ? "Yes" : "No") + '</td>';
+            //         })
+            //         allTradesHtml += "</table>"
+            //     }
+                // if(yourRejectedTrades.length > 0){
+                //     allTradesHtml += "<h3>Your Rejected Trades</h3><table>"
+                //     allTradesHtml += '<thead><tr><th scope="col">Initiator</th><th scope="col">They\'re Giving</th><th scope="col">They\'re Requesting</th></tr></thead>';
+                //     tradesTheyInitiated.forEach((t) => {
+                //         if(!t.approved_by_receiver && !t.commissioner_approver){
+                //             allTradesHtml += '<tr><td>' + t.initiator + '</td><td>' + t.initiator_players.split(",").join("<br>") + '</td><td>' + t.receiver_players.split(",").join("<br>") + '</td>';
+                //         }
+                //     })
+                //     allTradesHtml += "</table>"
+                // }
+            // }
+            // const commishTrades = trades.data.filter((t) => t.approved_by_receiver && !t.commissioner_approved && commissioners.includes(user) && t.initiator != user && t.receiver != user && !t.commissioners_who_approved.split(",").includes(user))
+            // if(commishTrades.length > 0){
+            //     allTradesHtml += "<h3>Trades Awaiting Commissioner Approval</h3><table>"
+            //     allTradesHtml += '<thead><tr><th scope="col">Initiator</th><th scope="col">Initiator Giving</th><th scope="col">Receiver</th><th scope="col">Receiver Receiving</th><th scope="col">Action</th></tr></thead>';
+            //     commishTrades.forEach((t) => {
+            //         allTradesHtml += '<tr><td>' + t.initiator + '</td><td>' + t.initiator_players.split(",").join("<br>") + '</td><td>' + t.receiver + '</td><td>' + t.receiver_players.split(",").join("<br>") + '</td><td><button class="accept-trade-button commish-trade-button" value='+t.ID+'>Approve Trade</button>&nbsp;<button class="reject-trade-button commish-trade-button" value='+t.ID+'>Reject Trade</button></td>';
+            //     })
+            //     allTradesHtml += "</table>";
+            // }
+
+            // const allApprovedTrades = trades.data.filter((t) => t.approved_by_receiver && t.commissioners_who_approved.split(",").length == 4)
+
+            // allTradesHtml += "<h2>Who would you like to trade with?</h2>"
+            // allTradesHtml += "<select id='team-to-trade-with'>"
+            // allTradesHtml += '<option value="" disabled selected hidden>Select Team</option>'
+            // allFantasyTeamNames.filter((team) => team != user).forEach((team) => {
+            //     allTradesHtml += "<option value="+team.split(" ").join("+")+">"+team+"</option>"
+            // })
+            // allTradesHtml += "</select>"
+            // allTradesHtml += "<div id='make-trade-div'></div>"
             allTradesHtml += "</div>"
 
             html += welcomeHtml
@@ -512,12 +579,8 @@ async function showCorrectSection(inputSection){
     const sections = ["keepers", "all-teams", "all-available-players", "trades", "rosters-draft-picks"];
     sections.forEach((section)=>{
         if(section == inputSection){
-            if(section == "rosters-draft-picks"){
-                document.getElementById(section + "-section").style.display = document.getElementById(section+"-section").style.display == "none" ? "flex" : "none"
-                document.getElementById("start-draft-button").style.display = "none"
-            } else {
-                document.getElementById(section + "-section").style.display = document.getElementById(section+"-section").style.display == "none" ? "block" : "none"
-            }
+            document.getElementById("start-draft-button").style.display = "none"
+            document.getElementById(section + "-section").style.display = document.getElementById(section+"-section").style.display == "none" ? "block" : "none"
             document.getElementById("show-"+section+"-button").style.color = document.getElementById(section+"-section").style.display == "none" ? "black" : "red"
         } else {
             document.getElementById(section+"-section").style.display = "none";
@@ -708,11 +771,14 @@ document.getElementsByTagName("body")[0].addEventListener("keydown", function(e)
                 for(let j = 0; j < playerListItems.length; j++){
                     if(playerListItems[j].innerHTML.toLowerCase().includes("á")){
                         playerListItems[j].innerHTML = playerListItems[j].innerHTML.replaceAll("á", "a")
-                    } else if (playerListItems[j].innerHTML.toLowerCase().includes("é")){
+                    }
+                    if (playerListItems[j].innerHTML.toLowerCase().includes("é")){
                         playerListItems[j].innerHTML = playerListItems[j].innerHTML.replaceAll("é", "e")
-                    } else if (playerListItems[j].innerHTML.toLowerCase().includes("ó")){
+                    }
+                    if (playerListItems[j].innerHTML.toLowerCase().includes("ó")){
                         playerListItems[j].innerHTML = playerListItems[j].innerHTML.replaceAll("ó", "o")
-                    } else if (playerListItems[j].innerHTML.toLowerCase().includes("í")){
+                    }
+                    if (playerListItems[j].innerHTML.toLowerCase().includes("í")){
                         playerListItems[j].innerHTML = playerListItems[j].innerHTML.replaceAll("í", "i")
                     }
                     if(playerListItems[j].innerHTML.toLowerCase().includes(playerSearchValue.toLowerCase())){
@@ -727,6 +793,33 @@ document.getElementsByTagName("body")[0].addEventListener("keydown", function(e)
             }
         }
         document.getElementById("all-teams-div").innerHTML = playerSearchHtml;
+    } else if (e.target.id == "search-team"){
+        let teamsDraftSections = document.getElementsByClassName('teams-drafts-well');
+        let teamNames = document.getElementsByClassName('teams-draft-team-name')
+        if(!keydownOnceTeamDraft){
+            for(let i = 0; i < teamsDraftSections.length; i++){
+                let teamObj = {};
+                teamObj["html"] = teamsDraftSections[i].outerHTML
+                teamObj["teamName"] = teamNames[i].outerHTML.split('<h1 class="teams-draft-team-name">').join("").split("</h1>")[0]
+                teamsDraftsHtml.push(teamObj)
+            }
+            keydownOnceTeamDraft = true;
+        }
+        
+        if(e.key == "Backspace"){
+            teamDraftSearchValue = teamDraftSearchValue.substring(0, teamDraftSearchValue.length - 1)
+        } else {
+            teamDraftSearchValue += e.key
+        }
+
+        let teamDraftSearchHtml = "";
+        console.log(teamsDraftsHtml)
+        for(let i = 0; i < teamsDraftsHtml.length; i++){
+            if(teamsDraftsHtml[i].teamName.toLowerCase().includes(teamDraftSearchValue.toLowerCase())){
+                teamDraftSearchHtml += teamsDraftsHtml[i].html;
+            }
+        }
+        document.getElementById("rosters-draft-picks-div").innerHTML = teamDraftSearchHtml;
     } else if (e.target.id == "search-available-player"){
         let positionDropdownValue = document.getElementById("all-available-players-position-filter").value;
         let teamDropdownValue = document.getElementById("all-available-players-team-filter").value;
@@ -738,69 +831,73 @@ document.getElementsByTagName("body")[0].addEventListener("keydown", function(e)
         }
 
         let filteredPlayers = ""
-        for(let i = 0; i < allAvailablePlayersToDraftArray.length; i++){
-            const playerDetails = allAvailablePlayersToDraftArray[i].details;
-            const playerUrl = allAvailablePlayersToDraftArray[i].url;
-            let playerName = playerDetails.split(", ")[0];
-            if(playerName.includes("á")){
-                playerName = playerName.replaceAll("á", "a")
-            } else if (playerName.includes("é")){
-                playerName = playerName.replaceAll("é", "e")
-            } else if (playerName.includes("ó")){
-                playerName = playerName.replaceAll("ó", "o")
-            } else if (playerName.includes("í")){
-                playerName = playerName.replaceAll("í", "i")
-            }
-
-            const playerTeam = teamsMap[playerDetails.split(", ")[1].split(" - ")[0]]
-            const playerPosition = playerDetails.split(", ")[1].split(" - ")[1];
-
-            if(positionDropdownValue != "" && teamDropdownValue != ""){
-                if(positionDropdownValue == "all positions" && teamDropdownValue == "all teams"){
+        availablePlayersToDraft().then((availablePlayersToDraft) => {
+            availablePlayersToDraft.forEach((availablePlayerToDraft) => {
+                const playerDetails = availablePlayerToDraft.details;
+                const playerUrl = availablePlayerToDraft.url;
+                let playerName = playerDetails.split(", ")[0];
+                if(playerName.includes("á")){
+                    playerName = playerName.replaceAll("á", "a")
+                }
+                if (playerName.includes("é")){
+                    playerName = playerName.replaceAll("é", "e")
+                } 
+                if (playerName.includes("ó")){
+                    playerName = playerName.replaceAll("ó", "o")
+                } 
+                if (playerName.includes("í")){
+                    playerName = playerName.replaceAll("í", "i")
+                }
+    
+                const playerTeam = teamsMap[playerDetails.split(", ")[1].split(" - ")[0]]
+                const playerPosition = playerDetails.split(", ")[1].split(" - ")[1];
+    
+                if(positionDropdownValue != "" && teamDropdownValue != ""){
+                    if(positionDropdownValue == "all positions" && teamDropdownValue == "all teams"){
+                        if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
+                        }
+                    } else if (positionDropdownValue != "all positions" & teamDropdownValue == "all teams"){
+                        if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && playerPosition.includes(positionDropdownValue)){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
+                        }
+                    } else if (positionDropdownValue == "all positions" & teamDropdownValue != "all teams"){
+                        if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && teamDropdownValue == playerTeam){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
+                        }
+                    } else {
+                        if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && playerPosition.includes(positionDropdownValue) && teamDropdownValue == playerTeam){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
+                        }
+                    }
+                } else if (positionDropdownValue != "" && teamDropdownValue == ""){
+                    if (positionDropdownValue == "all positions"){
+                        if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
+                        }
+                    } else {
+                        if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && playerPosition.includes(positionDropdownValue)){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
+                        }
+                    }
+                } else if (positionDropdownValue == "" && teamDropdownValue != ""){
+                    if (teamDropdownValue == "all teams"){
+                        if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
+                        }
+                    } else {
+                        if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && teamDropdownValue == playerTeam){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
+                        }
+                    }
+                } else {
                     if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
                         filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
                     }
-                } else if (positionDropdownValue != "all positions" & teamDropdownValue == "all teams"){
-                    if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && playerPosition.includes(positionDropdownValue)){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
-                    }
-                } else if (positionDropdownValue == "all positions" & teamDropdownValue != "all teams"){
-                    if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && teamDropdownValue == playerTeam){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
-                    }
-                } else {
-                    if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && playerPosition.includes(positionDropdownValue) && teamDropdownValue == playerTeam){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
-                    }
                 }
-            } else if (positionDropdownValue != "" && teamDropdownValue == ""){
-                if (positionDropdownValue == "all positions"){
-                    if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
-                    }
-                } else {
-                    if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && playerPosition.includes(positionDropdownValue)){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
-                    }
-                }
-            } else if (positionDropdownValue == "" && teamDropdownValue != ""){
-                if (teamDropdownValue == "all teams"){
-                    if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
-                    }
-                } else {
-                    if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && teamDropdownValue == playerTeam){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
-                    }
-                }
-            } else {
-                if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
-                    filteredPlayers += "<li class='available-players-li'><a href='"+playerUrl+"' target='_blank'>"+playerDetails+"</a></li>";
-                }
-            }
-        }
-
-        document.getElementById("available-players-ul").innerHTML = filteredPlayers;
+            })
+            document.getElementById("available-players-ul").innerHTML = filteredPlayers;
+        })
     }
 });
 
@@ -1064,8 +1161,68 @@ document.getElementsByTagName("body")[0].addEventListener("click", async functio
             return response.json(); 
         })
         .then(function(res){ 
-            console.log(res)
             document.getElementById("trade-sent-text").style.display = "block"
+            setTimeout(() => {
+                loadHtml(res, "block")
+            }, 3000)
+        });
+    } else if (e.target.classList.contains("accept-trade-button") && e.target.classList.contains("commish-trade-button")){
+        let {user} = await getLoggedInUser();
+        fetch("/api/trade", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ID: e.target.value, action: "approved by commissioner", commissioner: user})
+        })
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){ 
+            loadHtml(res, "block");
+        });
+    } else if (e.target.classList.contains("reject-trade-button") && e.target.classList.contains("commish-trade-button")){
+        let {user} = await getLoggedInUser();
+        fetch("/api/trade", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ID: e.target.value, action: "rejected by commissioner"})
+        })
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){ 
+            loadHtml(res, "block");
+        });
+    } else if (e.target.classList.contains("accept-trade-button")){
+        fetch("/api/trade", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ID: e.target.value, action: "accepted by receiver"})
+        })
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){ 
+            loadHtml(res, "block");
+        });
+    } else if (e.target.classList.contains("reject-trade-button")){
+        fetch("/api/trade", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ID: e.target.value, action: "rejected by receiver"})
+        })
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){ 
+            loadHtml(res, "block");
         });
     }
 })
@@ -1079,117 +1236,121 @@ document.getElementsByTagName("body")[0].addEventListener("change", async functi
         let teamDropdownValue = document.getElementById("all-available-players-team-filter").value
 
         let filteredPlayers = "";
-        allAvailablePlayersToDraftArray.forEach((player) => {
-            let position = player.details.split(", ")[1].split(" - ")[1];
-            if(e.target.value == "all positions"){
-                if(availablePlayerSearchValue == undefined && (teamDropdownValue == "" || teamDropdownValue == "all teams")){
-                    filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                } else if (availablePlayerSearchValue != undefined && (teamDropdownValue == "" || teamDropdownValue == "all teams")){
-                    let playerName = player.details.split(", ")[0];
-                    if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
+        availablePlayersToDraft().then((availablePlayersToDraft) => {
+            availablePlayersToDraft.forEach((player) => {
+                let position = player.details.split(", ")[1].split(" - ")[1];
+                if(e.target.value == "all positions"){
+                    if(availablePlayerSearchValue == undefined && (teamDropdownValue == "" || teamDropdownValue == "all teams")){
                         filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                    } else if (availablePlayerSearchValue != undefined && (teamDropdownValue == "" || teamDropdownValue == "all teams")){
+                        let playerName = player.details.split(", ")[0];
+                        if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }
+                    } else if (availablePlayerSearchValue != undefined && (teamDropdownValue != "" && teamDropdownValue != "all teams")){
+                        let team = teamsMap[player.details.split(", ")[1].split(" - ")[0]]
+                        let playerName = player.details.split(", ")[0];
+                        if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && team == teamDropdownValue){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }
+                    } else if (availablePlayerSearchValue != undefined && teamDropdownValue == "all teams"){
+                        if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }
                     }
-                } else if (availablePlayerSearchValue != undefined && (teamDropdownValue != "" && teamDropdownValue != "all teams")){
-                    let team = teamsMap[player.details.split(", ")[1].split(" - ")[0]]
-                    let playerName = player.details.split(", ")[0];
-                    if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && team == teamDropdownValue){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                    }
-                } else if (availablePlayerSearchValue != undefined && teamDropdownValue == "all teams"){
-                    if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                    }
-                }
-            } else {
-                if(availablePlayerSearchValue == undefined && (teamDropdownValue == "" || teamDropdownValue == "all teams")){
-                    if(position.includes(e.target.value)){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                    }
-                } else if (availablePlayerSearchValue == undefined && (teamDropdownValue != "" && teamDropdownValue != "all teams")){
-                    let team = teamsMap[player.details.split(", ")[1].split(" - ")[0]]
-                    if(position.includes(e.target.value) && team == teamDropdownValue){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                    }
-                } else if (availablePlayerSearchValue != undefined && (teamDropdownValue == "" || teamDropdownValue == "all teams")){
-                    let playerName = player.details.split(", ")[0];
-                    if(position.includes(e.target.value) && playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                    }  
                 } else {
-                    let team = teamsMap[player.details.split(", ")[1].split(" - ")[0]]
-                    let playerName = player.details.split(", ")[0];
-                    if(position.includes(e.target.value) && playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && team == teamDropdownValue){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                    }  
+                    if(availablePlayerSearchValue == undefined && (teamDropdownValue == "" || teamDropdownValue == "all teams")){
+                        if(position.includes(e.target.value)){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }
+                    } else if (availablePlayerSearchValue == undefined && (teamDropdownValue != "" && teamDropdownValue != "all teams")){
+                        let team = teamsMap[player.details.split(", ")[1].split(" - ")[0]]
+                        if(position.includes(e.target.value) && team == teamDropdownValue){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }
+                    } else if (availablePlayerSearchValue != undefined && (teamDropdownValue == "" || teamDropdownValue == "all teams")){
+                        let playerName = player.details.split(", ")[0];
+                        if(position.includes(e.target.value) && playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }  
+                    } else {
+                        let team = teamsMap[player.details.split(", ")[1].split(" - ")[0]]
+                        let playerName = player.details.split(", ")[0];
+                        if(position.includes(e.target.value) && playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && team == teamDropdownValue){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }  
+                    }
                 }
-            }
+            })
+            document.getElementById("available-players-ul").innerHTML = filteredPlayers;
         })
-        document.getElementById("available-players-ul").innerHTML = filteredPlayers;
     } else if (e.target.id == "all-available-players-team-filter"){
         let positionDropdownValue = document.getElementById("all-available-players-position-filter").value;
 
         let filteredPlayers = "";
-        allAvailablePlayersToDraftArray.forEach((player) => {
-            let team = teamsMap[player.details.split(", ")[1].split(" - ")[0]];
-            if(availablePlayerSearchValue == undefined && positionDropdownValue == ""){
-                if(e.target.value == "all teams"){
-                    filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                } else {
-                    if(team == e.target.value){
+        availablePlayersToDraft().then((availablePlayersToDraft) => {
+            availablePlayersToDraft.forEach((player) => {
+                let team = teamsMap[player.details.split(", ")[1].split(" - ")[0]];
+                if(availablePlayerSearchValue == undefined && positionDropdownValue == ""){
+                    if(e.target.value == "all teams"){
                         filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                    } else {
+                        if(team == e.target.value){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }
+                    }
+                } else if (availablePlayerSearchValue == undefined && positionDropdownValue != ""){
+                    let position = player.details.split(", ")[1].split(" - ")[1]
+                    if(e.target.value == "all teams" && positionDropdownValue == "all teams"){
+                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                    } else if (e.target.value != "all teams" && positionDropdownValue == "all teams"){
+                        if(team == e.target.value){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }
+                    } else if (e.target.value == "all teams" && positionDropdownValue != "all teams"){
+                        if(position.includes(positionDropdownValue)){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }
+                    } else {
+                        if(team == e.target.value && position.includes(positionDropdownValue)){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }
+                    }
+                } else if (availablePlayerSearchValue != undefined && positionDropdownValue == ""){
+                    let playerName = player.details.split(", ")[0];
+                    if(e.target.value == "all teams"){
+                        if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"  
+                        }
+                    } else {
+                        if(team == e.target.value && playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }
+                    }
+                } else {
+                    let playerName = player.details.split(", ")[0];
+                    let position = player.details.split(", ")[1].split(" - ")[1];
+                    if(e.target.value == "all teams" && positionDropdownValue == "all positions"){
+                        if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }
+                    } else if (e.target.value != "all teams" && positionDropdownValue == "all positions"){
+                        if(team == e.target.value && playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }  
+                    } else if (e.target.value == "all teams" && positionDropdownValue != "all positions"){
+                        if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && position.includes(positionDropdownValue)){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }  
+                    } else {
+                        if(team == e.target.value && playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && position.includes(positionDropdownValue)){
+                            filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
+                        }
                     }
                 }
-            } else if (availablePlayerSearchValue == undefined && positionDropdownValue != ""){
-                let position = player.details.split(", ")[1].split(" - ")[1]
-                if(e.target.value == "all teams" && positionDropdownValue == "all teams"){
-                    filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                } else if (e.target.value != "all teams" && positionDropdownValue == "all teams"){
-                    if(team == e.target.value){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                    }
-                } else if (e.target.value == "all teams" && positionDropdownValue != "all teams"){
-                    if(position.includes(positionDropdownValue)){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                    }
-                } else {
-                    if(team == e.target.value && position.includes(positionDropdownValue)){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                    }
-                }
-            } else if (availablePlayerSearchValue != undefined && positionDropdownValue == ""){
-                let playerName = player.details.split(", ")[0];
-                if(e.target.value == "all teams"){
-                    if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"  
-                    }
-                } else {
-                    if(team == e.target.value && playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                    }
-                }
-            } else {
-                let playerName = player.details.split(", ")[0];
-                let position = player.details.split(", ")[1].split(" - ")[1];
-                if(e.target.value == "all teams" && positionDropdownValue == "all positions"){
-                    if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                    }
-                } else if (e.target.value != "all teams" && positionDropdownValue == "all positions"){
-                    if(team == e.target.value && playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase())){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                    }  
-                } else if (e.target.value == "all teams" && positionDropdownValue != "all positions"){
-                    if(playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && position.includes(positionDropdownValue)){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                    }  
-                } else {
-                    if(team == e.target.value && playerName.toLowerCase().includes(availablePlayerSearchValue.toLowerCase()) && position.includes(positionDropdownValue)){
-                        filteredPlayers += "<li class='available-players-li'><a href='"+player.url+"' target='_blank'>"+player.details+"</a></li>"
-                    }
-                }
-            }
+            })
+            document.getElementById("available-players-ul").innerHTML = filteredPlayers;
         })
-        document.getElementById("available-players-ul").innerHTML = filteredPlayers;
     } else if (e.target.id == "confirm-reset-checkbox"){
         document.getElementById("reset-draft-button").disabled = !document.getElementById("reset-draft-button").disabled
     } else if (e.target.id == "team-to-trade-with"){

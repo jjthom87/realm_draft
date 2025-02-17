@@ -2,7 +2,7 @@ const express = require('express');
 const nodemailer = require("nodemailer");
 const router = express.Router();
 const knex = require('knex')(require('../knexfile.js'));
-const { getCurrentPick, setDraftPickDeadline, getDraft, sendEmailToNextPick } = require('../api/draft.js');
+const { getCurrentPick, setDraftPickDeadline, getDraft, sendEmailToNextPick, sendEmail } = require('../api/draft.js');
 
 router.get('/draft', async (req, res) => {
     const draft = await getDraft();
@@ -229,12 +229,118 @@ router.post("/trade", (req, res) => {
       receiver_players: req.body.receiver.trading.toString()
     })
     .then(response => {
-      res.json({success: true, response});
+        //nodemailer email commish and receiver
+        const email = {
+            to: "draft-admin@froofydoog.com",
+            subject: "A Trade has been made to you in Realm by " + req.body.initiator.team,
+            message: "<p>"+req.body.initiator.team+" wants to trade you "+req.body.initiator.trading.toString()+" for "+req.body.receiver.trading.toString()+"</p>",
+            commishSubject: "Local - A Trade has been made in Realm by " + req.body.initiator.team + " to " + req.body.receiver.team,
+            commishMessage: req.body.initiator.team+" wants to trade "+req.body.receiver.team+" "+req.body.initiator.trading.toString()+" for "+req.body.receiver.trading.toString()
+        }
+        sendEmail(email)
+        res.json({success: true, user: req.user.username, response});
     })
     .catch(error => {
-      console.error('Error with a trade ', error);
-      res.json({success: false, error})
+        console.error('Error with a trade ', error);
+        res.json({success: false, error})
     });
+})
+
+router.put("/trade", (req, res) => {
+    let tradeObject
+    if(req.body.action == "approved by commissioner"){
+        knex('trades')
+        .select('*')
+        .where({ ID: req.body.ID })
+        .then(tradeData => {
+            const commissionersWhoApproved = tradeData[0].commissioners_who_approved != null ? tradeData[0].commissioners_who_approved.split(",") : [];
+            
+            if(commissionersWhoApproved.length == 3){
+                tradeObject = []
+                const tradeInitiator = tradeData[0].initiator;
+                const tradeReceiver = tradeData[0].receiver;
+                const tradeInitiatorTradedDraftPicks = tradeData[0].initiator_players.split(",").filter((t) => t.includes("Round"));
+                const tradeInitiatorTradedPlayers = tradeData[0].initiator_players.split(",").filter((t) => !t.includes("Round"));
+                const tradeReceiverTradedDraftPicks = tradeData[0].receiver_players.split(",").filter((t) => t.includes("Round"));
+                const tradeReceiverTradedPlayers = tradeData[0].receiver_players.split(",").filter((t) => !t.includes("Round"));
+
+
+                knex('trades').where({ ID: req.body.ID })
+                .update(tradeObject)
+                .then(response => {
+                    //nodemailer email commish and receiver
+                    // const email = {
+                    //     to: "draft-admin@froofydoog.com",
+                    //     subject: "A Trade has been made to you in Realm by " + req.body.initiator.team,
+                    //     message: "<p>"+req.body.initiator.team+" wants to trade you "+req.body.initiator.trading.toString()+" for "+req.body.receiver.trading.toString()+"</p>",
+                    //     commishSubject: "Local - A Trade has been made in Realm by " + req.body.initiator.team + " to " + req.body.receiver.team,
+                    //     commishMessage: req.body.initiator.team+" wants to trade "+req.body.receiver.team+" "+req.body.initiator.trading.toString()+" for "+req.body.receiver.trading.toString()
+                    // }
+                    // sendEmail(email)
+                    // res.json({success: true, response});
+                    res.json({success: true, user: req.user.username, response})
+                })
+                .catch(error => {
+                    console.error('Error with a trade ', error);
+                    res.json({success: false, error})
+                });
+            } else {
+                commissionersWhoApproved.push(req.user.username)   
+
+                knex('trades').where({ ID: req.body.ID })
+                .update({commissioners_who_approved: commissionersWhoApproved.join(",")})
+                .then(response => {
+                    //nodemailer email commish and receiver
+                    // const email = {
+                    //     to: "draft-admin@froofydoog.com",
+                    //     subject: "A Trade has been made to you in Realm by " + req.body.initiator.team,
+                    //     message: "<p>"+req.body.initiator.team+" wants to trade you "+req.body.initiator.trading.toString()+" for "+req.body.receiver.trading.toString()+"</p>",
+                    //     commishSubject: "Local - A Trade has been made in Realm by " + req.body.initiator.team + " to " + req.body.receiver.team,
+                    //     commishMessage: req.body.initiator.team+" wants to trade "+req.body.receiver.team+" "+req.body.initiator.trading.toString()+" for "+req.body.receiver.trading.toString()
+                    // }
+                    // sendEmail(email)
+                    // res.json({success: true, response});
+                    res.json({success: true, user: req.user.username, response})
+                })
+                .catch(error => {
+                    console.error('Error with a trade ', error);
+                    res.json({success: false, error})
+                });
+            }
+
+
+        })
+        .catch(err => {
+            console.error('Error ', err);
+        });
+    } else {
+        if(req.body.action == "rejected by receiver" || req.body.action == "rejected by commissioner"){
+            tradeObject = {rejected: true}
+        } else if (req.body.action == "accepted by receiver"){
+            tradeObject = {approved_by_receiver: true}
+        } else if (req.body.action == "approved by commissioner"){
+            tradeObject = {commissioner_approved: true}
+        }
+        knex('trades').where({ ID: req.body.ID })
+        .update(tradeObject)
+        .then(response => {
+            //nodemailer email commish and receiver
+            // const email = {
+            //     to: "draft-admin@froofydoog.com",
+            //     subject: "A Trade has been made to you in Realm by " + req.body.initiator.team,
+            //     message: "<p>"+req.body.initiator.team+" wants to trade you "+req.body.initiator.trading.toString()+" for "+req.body.receiver.trading.toString()+"</p>",
+            //     commishSubject: "Local - A Trade has been made in Realm by " + req.body.initiator.team + " to " + req.body.receiver.team,
+            //     commishMessage: req.body.initiator.team+" wants to trade "+req.body.receiver.team+" "+req.body.initiator.trading.toString()+" for "+req.body.receiver.trading.toString()
+            // }
+            // sendEmail(email)
+            // res.json({success: true, response});
+            res.json({success: true, user: req.user.username, response})
+        })
+        .catch(error => {
+            console.error('Error with a trade ', error);
+            res.json({success: false, error})
+        });
+    }
 })
 
 router.get("/trades", (req,res) => {
