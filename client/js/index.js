@@ -381,15 +381,15 @@ async function loadHtml(res, draftDisplay){
             if(allTeamsMap[team.team] == null){
                 allTeamsMap[team.team] = [];
             }
-            allTeamsMap[team.team].push(team.name)
+            allTeamsMap[team.team].push(team.name  + ", " + teamsMap[team.player_team] + " - " + team.position)
         })
         teamNames.forEach((teamName) => {
             allTeamsSectionHtml += `<div class='well teams-players-well' id="${teamName.split(" ").join("&")}-well" style='width: 300px; margin: 3px;'><h3>${teamName}</h3><ul id="${teamName.split(" ").join("&")}-team-list" style='list-style-type: none;'>`
             allTeamsMap[teamName].forEach((player) => {
                 if(allKeepers.map((k) => k.name).includes(player)){
-                    allTeamsSectionHtml += "<li class='team-player-li' style='color: red;'>"+player+"</li>"
+                    allTeamsSectionHtml += "<li class='team-player-li' style='margin-left: -40px;' style='color: red;'>"+player+"</li>"
                 } else {
-                    allTeamsSectionHtml += "<li class='team-player-li'>"+player+"</li>"
+                    allTeamsSectionHtml += "<li class='team-player-li' style='margin-left: -40px;'>"+player+"</li>"
                 }
             })
             allTeamsSectionHtml += "</ul></div>"
@@ -449,14 +449,14 @@ async function loadHtml(res, draftDisplay){
                 allRosterDraftPicksHtml += "<h2>Keepers</h2>";
                 allRosterDraftPicksHtml += "<ul style='list-style-type: none;'>"
                 allRostersDraftPicks[i].keepers.forEach((p) => {
-                    allRosterDraftPicksHtml += "<li>" + p.name + "</li>"
+                    allRosterDraftPicksHtml += "<li style='margin-left: -60px;'>" + p.name + ", " + teamsMap[p.player_team] + " - " + p.position + "</li>"
                 })
                 allRosterDraftPicksHtml += "</ul>"
                 allRosterDraftPicksHtml += "<h2>Draft</h2>";
                 allRosterDraftPicksHtml += "<h3>Players Picked</h3>";
                 allRosterDraftPicksHtml += "<ul style='list-style-type: none;'>"
                 allRostersDraftPicks[i].draft.filter((p) => p.name != null).forEach((p) => {
-                    allRosterDraftPicksHtml += "<li>" + p.name + "</li>"
+                    allRosterDraftPicksHtml += "<li style='margin-left: -60px;'>" + p.name + ", " + teamsMap[p.player_team] + " - " + p.position + "</li>"
                 })
                 allRosterDraftPicksHtml += "</ul>";
                 allRosterDraftPicksHtml += "<h3>Draft Picks Left</h3>";
