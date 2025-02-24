@@ -386,8 +386,8 @@ async function loadHtml(res, draftDisplay){
         teamNames.forEach((teamName) => {
             allTeamsSectionHtml += `<div class='well teams-players-well' id="${teamName.split(" ").join("&")}-well" style='width: 300px; margin: 3px;'><h3>${teamName}</h3><ul id="${teamName.split(" ").join("&")}-team-list" style='list-style-type: none;'>`
             allTeamsMap[teamName].forEach((player) => {
-                if(allKeepers.map((k) => k.name).includes(player)){
-                    allTeamsSectionHtml += "<li class='team-player-li' style='margin-left: -40px;' style='color: red;'>"+player+"</li>"
+                if(allKeepers.map((k) => k.name).includes(player.split(", ")[0])){
+                    allTeamsSectionHtml += "<li class='team-player-li' style='margin-left: -40px; color: red;'>"+player+"</li>"
                 } else {
                     allTeamsSectionHtml += "<li class='team-player-li' style='margin-left: -40px;'>"+player+"</li>"
                 }
@@ -764,23 +764,26 @@ document.getElementsByTagName("body")[0].addEventListener("keydown", function(e)
 
         let playerSearchHtml = "";
         for(let i = 0; i < teamsPlayersHtml.length; i++){
-            if(teamsPlayersHtml[i].toLowerCase().includes('<li class="team-player-li">') && teamsPlayersHtml[i].toLowerCase().includes(playerSearchValue.toLowerCase())){
+            if(teamsPlayersHtml[i].toLowerCase().includes("á")){
+                teamsPlayersHtml[i] = teamsPlayersHtml[i].replaceAll("á", "a")
+            }
+            if (teamsPlayersHtml[i].toLowerCase().includes("é")){
+                teamsPlayersHtml[i] = teamsPlayersHtml[i].replaceAll("é", "e")
+            }
+            if (teamsPlayersHtml[i].toLowerCase().includes("ó")){
+                teamsPlayersHtml[i] = teamsPlayersHtml[i].replaceAll("ó", "o")
+            }
+            if (teamsPlayersHtml[i].toLowerCase().includes("í")){
+                teamsPlayersHtml[i] = teamsPlayersHtml[i].replaceAll("í", "i")
+            }
+            if (teamsPlayersHtml[i].toLowerCase().includes("ñ")){
+                teamsPlayersHtml[i] = teamsPlayersHtml[i].replaceAll("ñ", "n")
+            }
+            if(teamsPlayersHtml[i].toLowerCase().includes('<li class="team-player-li"') && teamsPlayersHtml[i].toLowerCase().includes(playerSearchValue.toLowerCase())){
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(teamsPlayersHtml[i], "application/xml");
                 const playerListItems = doc.children[0].children[1].children
                 for(let j = 0; j < playerListItems.length; j++){
-                    if(playerListItems[j].innerHTML.toLowerCase().includes("á")){
-                        playerListItems[j].innerHTML = playerListItems[j].innerHTML.replaceAll("á", "a")
-                    }
-                    if (playerListItems[j].innerHTML.toLowerCase().includes("é")){
-                        playerListItems[j].innerHTML = playerListItems[j].innerHTML.replaceAll("é", "e")
-                    }
-                    if (playerListItems[j].innerHTML.toLowerCase().includes("ó")){
-                        playerListItems[j].innerHTML = playerListItems[j].innerHTML.replaceAll("ó", "o")
-                    }
-                    if (playerListItems[j].innerHTML.toLowerCase().includes("í")){
-                        playerListItems[j].innerHTML = playerListItems[j].innerHTML.replaceAll("í", "i")
-                    }
                     if(playerListItems[j].innerHTML.toLowerCase().includes(playerSearchValue.toLowerCase())){
                         if(playerSearchValue != ""){
                             playerListItems[j].classList.add("highlight-row");
@@ -847,6 +850,9 @@ document.getElementsByTagName("body")[0].addEventListener("keydown", function(e)
                 } 
                 if (playerName.includes("í")){
                     playerName = playerName.replaceAll("í", "i")
+                }
+                if (playerName.includes("ñ")){
+                    playerName = playerName.replaceAll("ñ", "n")
                 }
     
                 const playerTeam = teamsMap[playerDetails.split(", ")[1].split(" - ")[0]]
