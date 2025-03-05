@@ -1,3 +1,12 @@
+window.onbeforeunload = function(event) {
+    fetch("/browser-refresh")
+    .then(function(response){ 
+        return response.json(); 
+    })
+    .then(function(res){
+    })
+};
+
 const draftTimerIntervals = [];
 
 let playerSearchValue = "";
@@ -147,39 +156,45 @@ async function getAllTeams(team){
         })
 }
 
-async function availablePlayersToDraft(){
-    return await fetch("/api/players")
-    .then(function(response){ 
-        return response.json(); 
-    })
-    .then(async function(allPlayers){
-        return await fetch("/api/draft/players")
+async function getDraftedPlayers(){
+    return fetch("/api/draft/players")
         .then(function(response){ 
             return response.json(); 
         })
-        .then(async function(draftPicks){
-            return await fetch("/api/keepers")
-            .then(function(response){ 
-                return response.json(); 
-            })
-            .then(function(keepers){
-                let players = allPlayers.data;
-                let mappedPlayers = players.map((player)=> { 
-                    return {details: player.name + ", " + teamsMap[player.team] + " - " + player.position, url: player.yahoo_url}
-                })
-                for(let i = 0; i < mappedPlayers.length; i++){
-                    if(draftPicks.data.includes(mappedPlayers[i].details.split(",")[0])){
-                        mappedPlayers.splice(i,1)
-                    }
-                    let mappedKeepers = keepers.data.map((keeper) => keeper.name);
-                    if(mappedKeepers.includes(mappedPlayers[i].details.split(",")[0])){
-                        mappedPlayers.splice(i,1)
-                    }
-                }
-                return mappedPlayers;
-            });
-        });
-    });
+        .then(function(res){
+            return res.data;
+        })
+}
+
+async function getAllPlayers(){
+    return fetch("/api/players")
+        .then(function(response){ 
+            return response.json(); 
+        })
+        .then(function(res){
+            return res.data;
+        })
+}
+
+async function availablePlayersToDraft(){
+    let draftedPlayers = await getDraftedPlayers();
+    let allKeepers = await getKeepers();
+    let allPlayers = await getAllPlayers();
+
+    let newMappedPlayers = allPlayers.map((player)=> { 
+        return {details: player.name + ", " + teamsMap[player.team] + " - " + player.position, url: player.yahoo_url}
+    })
+    let mappedDraftPicks = draftedPlayers.map((d) => d.toLowerCase());
+
+    let mappedKeepers = allKeepers.map((keeper) => keeper.name.toLowerCase());
+    let availablePlayersToDraft = [];
+    newMappedPlayers.forEach((p) => {
+        if(!mappedDraftPicks.includes(p.details.split(",")[0].toLowerCase()) && !mappedKeepers.includes(p.details.split(",")[0].toLowerCase())){
+            availablePlayersToDraft.push(p)
+        }
+    })
+
+    return availablePlayersToDraft;
 }
 
 function startDraftTimer(){
@@ -275,8 +290,8 @@ async function loadHtml(res, draftDisplay){
         let buttonsHtml = '<div><button style="margin: 2px; color: black;" id="show-draft-button">Draft</button><button style="margin: 2px;" id="show-keepers-button">Keepers</button><button style="margin: 2px;" id="show-all-teams-button">Teams</button><button style="margin: 2px;" id="show-all-available-players-button">Available Players</button><button style="margin: 2px;" id="show-rosters-draft-picks-button">Rosters | Draft Picks</button>'
         let displayAsterisk = trades.data.filter((t) => t.receiver == user && !t.approved_by_receiver && !t.trade_rejected && !t.commissioner_approved).length > 0 ? "*" : ""
         buttonsHtml += '<button style="margin: 2px;" id="show-trades-button">Trades'+displayAsterisk+'</button>'
+        buttonsHtml += '<button style="margin: 2px;" id="show-users-button">Users</button>'
         buttonsHtml += '</div>'
-
 
         let draftHtml = `<button id="start-draft-button" style="display: none">Start Draft</button><h1 id='draft-paused-text' style='color: orange; display: none;'>Draft Paused</h1><button id='continue-draft-button' style='color: green; display: none; background-color: black; font-size: 31px;'>Continue Draft</button><div id="draft-section" style="display: ${draftDisplay};">`;
 
@@ -622,7 +637,7 @@ setTimeout(() => {
         return response.json(); 
     })
     .then(function(res){ 
-        loadHtml(res, "none")
+        loadHtml(res, "block")
     });
 }, 100);
 
@@ -816,9 +831,8 @@ document.getElementsByTagName("body")[0].addEventListener("keydown", function(e)
         }
 
         let teamDraftSearchHtml = "";
-        console.log(teamsDraftsHtml)
         for(let i = 0; i < teamsDraftsHtml.length; i++){
-            if(teamsDraftsHtml[i].teamName.toLowerCase().includes(teamDraftSearchValue.toLowerCase())){
+            if(teamsDraftsHtml[i].html.toLowerCase().includes(teamDraftSearchValue.toLowerCase())){
                 teamDraftSearchHtml += teamsDraftsHtml[i].html;
             }
         }
@@ -936,7 +950,7 @@ document.getElementsByTagName("body")[0].addEventListener("click", async functio
                     }
                 } else {
                     startDraft()
-                    loadHtml(res, "none")
+                    loadHtml(res, "block")
                 }
             });
         

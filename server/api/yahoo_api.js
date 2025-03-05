@@ -108,12 +108,12 @@ function loadPlayersToDb(){
         const access_token = res.data.access_token
         const refresh_token = res.data.refresh_token
     
-        let totalPlayers = 2275;
+        let totalPlayers = 2000;
         // let totalPlayers = 100;
         let start = 1;
     
         while(start < totalPlayers){
-            makeAPIrequest(access_token, refresh_token, `https://fantasysports.yahooapis.com/fantasy/v2/league/431.l.21149/players;start=${start}`).then((data) => {
+            makeAPIrequest(access_token, refresh_token, `https://fantasysports.yahooapis.com/fantasy/v2/league/458.l.3636/players;start=${start}`).then((data) => {
                 const parser = new XMLParser();
                 let jObj = parser.parse(data);
                 const players = jObj.fantasy_content.league.players.player
@@ -138,7 +138,7 @@ function loadPlayersToDb(){
         }
     })
 }
-// loadPlayersToDb();
+loadPlayersToDb();
 
 function loadTeamsPlayersToDb(){
     getInitialAuthorization().then((res) => {
@@ -182,7 +182,16 @@ function loadTeamsPlayersToDb(){
 }
 // loadTeamsPlayersToDb();
 
-// makeAPIrequest("https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games;game_keys=mlb/teams")
+// function getLeagueInfo(){
+//     getInitialAuthorization().then((res) => {
+//         const access_token = res.data.access_token
+//         const refresh_token = res.data.refresh_token
+//         makeAPIrequest(access_token, refresh_token, "https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games;game_keys=mlb/teams").then((data) => {
+//             console.log(data)
+//         })
+//     })
+// }
+// getLeagueInfo()
 
 // makeAPIrequest("https://fantasysports.yahooapis.com/fantasy/v2/league/431.l.21149/teams")
 // makeAPIrequest("https://fantasysports.yahooapis.com/fantasy/v2/league/431.l.21149/players;start=1,count=25")

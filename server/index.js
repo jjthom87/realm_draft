@@ -3,6 +3,11 @@ const path = require('path');
 
 // Middleware for creating a session id on server and a session cookie on client
 const expressSession = require('express-session');
+const MySQLStore = require('express-mysql-session')(expressSession);
+
+const options = require('./knexfile.js').connection
+
+const sessionStore = new MySQLStore(options);
 
 // cors package prevents CORS errors when using client side API calls
 const cors = require('cors');
@@ -40,7 +45,8 @@ app.use(
   expressSession({
     secret: "secret key",
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: true,
+    store: sessionStore
   })
 );
 // Initialize Passport middleware
@@ -52,12 +58,35 @@ app.use(passport.initialize());
 // Additional information: https://stackoverflow.com/questions/22052258/what-does-passport-session-middleware-do
 app.use(passport.session());
 
+const setCookieExpiration = function (req, res, next) {
+  // if(req.session && req.session.cookie._expires < new Date()){
+  //   console.log(req.session)
+  //   var hour = 3600000
+  //   req.session.cookie._expires = new Date(Date.now() + hour)
+  // }
+  // next()
+}
+
+// app.use(setCookieExpiration)
+
 app.get('/', function(req,res){
 	res.sendFile(path.join(__dirname, '../client/html/index.html'));
 });
 
 app.get('/sign-up', function(req,res){
 	res.sendFile(path.join(__dirname, '../client/html/sign_up.html'));
+});
+
+app.get('/browser-refresh', function(req,res){
+  console.log(req.session)
+  // console.log(new Date(req.session.cookie.created).getSeconds() + 60000000000);
+  // console.log(new Date().getSeconds() + 60000000000)
+  // if(req.session && (new Date(req.session.cookie.created).getSeconds() + 60000000000) < new Date().getSeconds() + 60000000000){
+  //   console.log(req.session)
+  //   var hour = 60000000000
+  //   req.session.cookie._expires = new Date(Date.now() + hour)
+  //   req.session.cookie.created = new Date()
+  // }
 });
 
 app.use(express.static('./client'));

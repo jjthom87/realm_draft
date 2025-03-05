@@ -80,6 +80,8 @@ passport.serializeUser((userId, done) => {
 passport.deserializeUser((userId, done) => {
   // console.log('deserializeUser (user id):', userId);
   knex('users')
+    .select('id')
+    .select('username')
     .where({ id: userId.user.id })
     .then(user => {
       // Remember that knex will return an array of records, so we need to get a single record from it
